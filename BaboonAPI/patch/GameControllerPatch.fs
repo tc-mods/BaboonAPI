@@ -26,7 +26,7 @@ type private FreePlayLoader() =
         member this.Dispose() =
             bundle.Unload true
 
-type GameControllerExtension() =
+type private GameControllerExtension() =
     static let mutable loadedTrack: LoadedTromboneTrack option = None
     static let logger = Logger.CreateLogSource "BaboonAPI.GameControllerExtension"
 
@@ -77,48 +77,49 @@ type GameControllerExtension() =
 type GameControllerPatch() =
     static let tracktitles_f = AccessTools.Field(typeof<GlobalVariables>, nameof GlobalVariables.data_tracktitles)
 
-    static member ReplaceTitleLookups (instructions: CodeInstruction seq): CodeInstruction seq = seq {
-        use e = instructions.GetEnumerator ()
-
-        while e.MoveNext () do
-            let ins = e.Current
-            if ins.LoadsField(tracktitles_f) then
-                e.MoveNext() |> ignore
-                yield e.Current // ldarg.0
-                e.MoveNext() |> ignore
-                yield e.Current // ldfld GameController::levelnum
-                yield CodeInstruction.Call(typeof<GameControllerExtension>, "fetchTrackTitle", [| typeof<int> |])
-
-                e.MoveNext() |> ignore // ldelem.ref
-                e.MoveNext() |> ignore // ldc.i4.0
-                e.MoveNext() |> ignore // ldelem.ref
-            else
-                yield ins
-    }
-
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<GameController>, "Start")>]
     static member TranspileStart(instructions: CodeInstruction seq) : CodeInstruction seq =
-        seq {
-            let head, _, tail =
-                instructions |> SeqUtil.partition (fun ins -> ins.Is(OpCodes.Ldstr, "/StreamingAssets/trackassets/"))
+        let matcher = CodeMatcher(instructions)
 
-            yield! head |> GameControllerPatch.ReplaceTitleLookups
+        // Fix title lookups
+        matcher.MatchForward(false, [|
+            CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
+            CodeMatch OpCodes.Ldarg_0
+            CodeMatch OpCodes.Ldfld
+            CodeMatch OpCodes.Ldelem_Ref
+            CodeMatch OpCodes.Ldc_I4_0
+            CodeMatch OpCodes.Ldelem_Ref
+        |]).Repeat(fun matcher ->
+            matcher.RemoveInstruction() // remove ldsfld
+                .Advance(3) // pos = first ldelem_ref
+                .RemoveInstructions(3)
+                .InsertAndAdvance(CodeInstruction.Call(typeof<GameControllerExtension>, "fetchTrackTitle", [| typeof<int> |]))
+                |> ignore
+        ) |> ignore
 
-            // call GameControllerExtension.Infix(this)
-            yield CodeInstruction OpCodes.Ldarg_0
-            yield CodeInstruction.Call(typeof<GameControllerExtension>, "Infix")
+        let startIndex =
+            matcher.Start().MatchForward(false, [|
+                CodeMatch(OpCodes.Ldstr, "/StreamingAssets/trackassets/")
+            |]).Pos
 
-            // Find the index of gameObject = null; (ldnull -> stloc_2)
-            let index =
-                tail
-                |> Seq.pairwise
-                |> Seq.findIndex (fun (prev, cur) ->
-                    prev.opcode = OpCodes.Ldnull && cur.opcode = OpCodes.Stloc_2)
+        let startLabels = matcher.Labels
 
-            // Skip to after stloc_2
-            yield! tail |> Seq.skip (index + 2)
-        }
+        let endIndex =
+            matcher.MatchForward(true, [|
+                CodeMatch OpCodes.Ldnull
+                CodeMatch OpCodes.Stloc_2
+            |]).Pos
+
+        matcher.RemoveInstructionsInRange(startIndex, endIndex)
+            .Start()
+            .Advance(startIndex)
+            .Insert([|
+                CodeInstruction OpCodes.Ldarg_0
+                CodeInstruction.Call(typeof<GameControllerExtension>, "Infix")
+            |])
+            .AddLabels(startLabels) // re-apply start labels
+            .InstructionEnumeration()
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<GameController>, "unloadBundles")>]

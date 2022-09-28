@@ -4,10 +4,10 @@ open System.Reflection.Emit
 open BaboonAPI.Internal
 open HarmonyLib
 
-type internal TrackCountAccessor() =
-    static let trackCount = TrackAccessor.trackCount
+type private TrackCountAccessor() =
+    static member trackCount () = TrackAccessor.trackCount()
 
-    static let trackrefByIndex = TrackAccessor.fetchTrackByIndex >> (fun t -> t.trackref)
+    static member trackrefByIndex i = TrackAccessor.fetchTrackByIndex i |> (fun t -> t.trackref)
 
 [<HarmonyPatch>]
 type TrackCountPatches() =
@@ -19,33 +19,33 @@ type TrackCountPatches() =
     [<HarmonyPatch(typeof<LevelSelectController>, "Start")>]
     [<HarmonyPatch(typeof<SaveSlotController>, "checkScores")>]
     [<HarmonyPatch(typeof<SaverLoader>, "genBlankScores")>]
-    static member PatchLength(instructions: CodeInstruction seq) : CodeInstruction seq = seq {
-        yield instructions |> Seq.head // first instruction is only passed as "prev" so just yield it here
-
-        for prev, cur in instructions |> Seq.pairwise do
-            if cur.LoadsField(trackrefs_f) then
-                () // hold to see if it's ldlen
-            elif prev.LoadsField(trackrefs_f) then
-                if cur.opcode = OpCodes.Ldlen then
-                    yield CodeInstruction.Call(typeof<TrackCountAccessor>, "trackCount")
-                else
-                    yield prev // wasn't ldlen, let the ldsfld pass
-            else
-                yield cur
-    }
+    static member PatchLength(instructions: CodeInstruction seq) : CodeInstruction seq =
+        CodeMatcher(instructions)
+            .MatchForward(false, [|
+                CodeMatch(fun ins -> ins.LoadsField(trackrefs_f))
+                CodeMatch(OpCodes.Ldlen)
+            |]).Repeat(fun matcher ->
+                matcher.RemoveInstructions(2)
+                    .Insert(CodeInstruction.Call(typeof<TrackCountAccessor>, "trackCount"))
+                    |> ignore
+            ).InstructionEnumeration()
 
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<SaveSlotController>, "checkScores")>]
     [<HarmonyPatch(typeof<SaverLoader>, "genBlankScores")>]
-    static member PatchAccess(instructions: CodeInstruction seq) : CodeInstruction seq = seq {
-        yield instructions |> Seq.head // first instruction is only passed as "prev" so just yield it here
+    static member PatchAccess(instructions: CodeInstruction seq) : CodeInstruction seq =
+        let matcher =
+            CodeMatcher(instructions).MatchForward(false, [|
+                CodeMatch(fun ins -> ins.LoadsField(trackrefs_f))
+                CodeMatch(fun ins -> ins.IsLdloc())
+                CodeMatch(OpCodes.Ldelem_Ref)
+            |])
 
-        for prev, cur in instructions |> Seq.pairwise do
-            if cur.LoadsField(trackrefs_f) then
-                () // skip
-            elif prev.opcode = OpCodes.Ldloc_3
-                 && cur.opcode = OpCodes.Ldelem_Ref then
-                yield CodeInstruction.Call(typeof<TrackCountAccessor>, "trackrefByIndex", [| typeof<int> |])
-            else
-                yield cur
-    }
+        matcher.Repeat(fun matcher ->
+            let lf_labels = matcher.Labels // get labels of LoadsField
+            matcher.RemoveInstruction() // remove LoadsField
+                .AddLabels(lf_labels) // re-apply labels to ldloc
+                .Advance(1) // advance to ldelem_ref
+                .SetInstruction(CodeInstruction.Call(typeof<TrackCountAccessor>, "trackrefByIndex", [| typeof<int> |]))
+                |> ignore
+        ).InstructionEnumeration()

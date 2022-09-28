@@ -5,7 +5,7 @@ open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
 open HarmonyLib
 
-type internal TrackrefAccessor() =
+type private TrackrefAccessor() =
     static let makeSingleTrackData (track: TromboneTrack) =
         let data = SingleTrackData()
         data.trackname_long <- track.trackname_long
@@ -28,9 +28,9 @@ type internal TrackrefAccessor() =
     static member finalLevelIndex () =
         (TrackAccessor.fetchTrack "einefinal").trackindex
 
-    static member trackrefForIndex =
-        TrackAccessor.fetchTrackByIndex
-        >> (fun t -> t.trackref)
+    static member trackrefForIndex i =
+        TrackAccessor.fetchTrackByIndex i
+        |> (fun t -> t.trackref)
 
     static member doLevelSelectStart (instance: LevelSelectController) =
         instance.sortdrop.SetActive false
@@ -71,31 +71,26 @@ type PointScenePatches() =
     static let trackrefs_f =
         AccessTools.Field(typeof<GlobalVariables>, nameof (GlobalVariables.data_trackrefs))
 
-    static let throwIfFalse (b: bool) =
-        if b = false then
-            invalidArg "instructions" "Expected more elements in sequence"
-
     /// Patch various GlobalVariable lookups of trackrefs to use our track registry instead
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<PointSceneController>, "Start")>]
     [<HarmonyPatch(typeof<PointSceneController>, "updateSave")>]
     [<HarmonyPatch(typeof<GameController>, "buildLevel")>]
-    static member Transpiler(instructions: CodeInstruction seq) : CodeInstruction seq = seq {
-        use iter = instructions.GetEnumerator()
+    static member Transpiler(instructions: CodeInstruction seq) : CodeInstruction seq =
+        let matcher = CodeMatcher(instructions).MatchForward(false, [|
+            CodeMatch(fun ins -> ins.LoadsField(trackrefs_f))
+            CodeMatch() // match anything
+            CodeMatch(OpCodes.Ldelem_Ref)
+        |])
 
-        while iter.MoveNext() do
-            let ins = iter.Current
-
-            if ins.LoadsField(trackrefs_f) then
-                iter.MoveNext() |> throwIfFalse
-                yield iter.Current // load index
-                iter.MoveNext() |> throwIfFalse // ldelem.ref
-
-                if (iter.Current.opcode = OpCodes.Ldelem_Ref) then
-                    yield CodeInstruction.Call(typeof<TrackrefAccessor>, "trackrefForIndex", [| typeof<int> |])
-            else
-                yield ins
-    }
+        matcher.Repeat(fun matcher ->
+            let lf_labels = matcher.Labels
+            matcher.RemoveInstruction()
+                .AddLabels(lf_labels) // shuffle labels onto new start
+                .Advance(1) // skip the load
+                .SetInstruction(CodeInstruction.Call(typeof<TrackrefAccessor>, "trackrefForIndex", [| typeof<int> |]))
+                |> ignore
+        ).InstructionEnumeration()
 
 [<HarmonyPatch>]
 type LevelControllerPatch() =
