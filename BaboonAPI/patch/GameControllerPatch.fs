@@ -53,7 +53,7 @@ type private GameControllerExtension() =
         instance.bgcontroller.songname <- l.trackref
 
         // Start background task next frame
-        instance.StartCoroutine(instance.loadAssetBundleResources ()) |> ignore
+        instance.StartCoroutine("loadAssetBundleResources") |> ignore
 
         // Usually this should be cleaned up by Unload, but let's just make sure...
         match loadedTrack with
@@ -123,10 +123,10 @@ type GameControllerPatch() =
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<GameController>, "unloadBundles")>]
-    static member UnloadPrefix(__instance: GameController) =
+    static member UnloadPrefix(__instance: GameController, ___mySoundAssetBundle: AssetBundle byref) =
         GameControllerExtension.Unload()
 
-        __instance.mySoundAssetBundle.Unload true
-        __instance.mySoundAssetBundle <- null
+        ___mySoundAssetBundle.Unload true
+        ___mySoundAssetBundle <- null
 
         false

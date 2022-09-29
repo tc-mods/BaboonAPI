@@ -9,7 +9,8 @@ open UnityEngine
 type internal BaseGameLoadedTrack(trackref: string, bundle: AssetBundle) =
     interface LoadedTromboneTrack with
         member this.LoadAudio() =
-            let obj = bundle.LoadAsset<GameObject> $"music_${trackref}"
+            Debug.Log $"Loading music_{trackref} from bundle {bundle}"
+            let obj = bundle.LoadAsset<GameObject>($"music_{trackref}")
             obj.GetComponent<AudioSource>()
 
         member this.LoadBackground() =
