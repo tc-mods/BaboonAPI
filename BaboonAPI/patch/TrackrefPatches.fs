@@ -1,5 +1,6 @@
 ﻿namespace BaboonAPI.Patch
 
+open System.Collections.Generic
 open System.Reflection.Emit
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
@@ -28,15 +29,16 @@ type private TrackrefAccessor() =
     static member finalLevelIndex () =
         (TrackAccessor.fetchTrack "einefinal").trackindex
 
-    static member trackrefForIndex i =
-        TrackAccessor.fetchTrackByIndex i
-        |> (fun t -> t.trackref)
+    static member trackrefForIndex i = (TrackAccessor.fetchTrackByIndex i).trackref
+    static member trackTitleForIndex i = (TrackAccessor.fetchTrackByIndex i).trackname_long
+    static member trackDifficultyForIndex i = (TrackAccessor.fetchTrackByIndex i).difficulty
+    static member trackLengthForIndex i = (TrackAccessor.fetchTrackByIndex i).length
 
-    static member doLevelSelectStart (instance: LevelSelectController) =
+    static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: List<SingleTrackData>) =
         instance.sortdrop.SetActive false
         TrackAccessor.allTracks()
         |> Seq.choose makeSingleTrackData
-        |> instance.alltrackslist.AddRange
+        |> alltrackslist.AddRange
 
 [<HarmonyPatch>]
 type FinalLevelPatches() =
@@ -67,7 +69,7 @@ type FinalLevelPatches() =
     }
 
 [<HarmonyPatch>]
-type PointScenePatches() =
+type TrackRefPatches() =
     static let trackrefs_f =
         AccessTools.Field(typeof<GlobalVariables>, nameof (GlobalVariables.data_trackrefs))
 
@@ -93,29 +95,53 @@ type PointScenePatches() =
         ).InstructionEnumeration()
 
 [<HarmonyPatch>]
-type LevelControllerPatch() =
+type TrackTitlePatches() =
     static let tracktitles_f = AccessTools.Field(typeof<GlobalVariables>, nameof GlobalVariables.data_tracktitles)
 
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<LevelSelectController>, "Start")>]
-    static member Transpiler(instructions: CodeInstruction seq): CodeInstruction seq = seq {
-        use e = instructions.GetEnumerator()
-        let mutable skipping = true
+    static member Transpiler(instructions: CodeInstruction seq): CodeInstruction seq =
+        let matcher = CodeMatcher(instructions).MatchForward(true, [|
+            CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
+            CodeMatch OpCodes.Ldlen
+        |])
 
-        while skipping && e.MoveNext() do
-            if e.Current.LoadsField(tracktitles_f) then
-                e.MoveNext() |> ignore // check next instruction
-                if e.Current.opcode = OpCodes.Ldlen then
-                    skipping <- false // found our data_tracktitles.Length call, break loop
+        matcher
+            .RemoveInstructionsInRange(0, matcher.Pos + 2) // Remove the whole start of the method
+            .Start() // Back to the beginning, insert our own call instead
+            .InsertAndAdvance([|
+                CodeInstruction OpCodes.Ldarg_0
+                CodeInstruction OpCodes.Ldarg_0
+                CodeInstruction.LoadField(typeof<LevelSelectController>, "alltrackslist")
+                CodeInstruction.Call(typeof<TrackrefAccessor>, "doLevelSelectStart",
+                               [| typeof<LevelSelectController>; typeof<List<SingleTrackData>> |])
+            |])
+            .InstructionEnumeration()
+    
+    [<HarmonyTranspiler>]
+    [<HarmonyPatch(typeof<PointSceneController>, "Start")>]
+    [<HarmonyPatch(typeof<PointSceneController>, "getTootsNum")>]
+    static member PatchTitleLookup(instructions: CodeInstruction seq): CodeInstruction seq =
+        CodeMatcher(instructions)
+            .MatchForward(false, [|
+                CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
+                CodeMatch OpCodes.Ldsfld
+                CodeMatch OpCodes.Ldelem_Ref
+            |])
+            .Repeat(fun matcher ->
+                let methodName, removeCount =
+                    match matcher.InstructionAt(3).opcode with
+                    | op when op = OpCodes.Ldc_I4_0 -> "trackTitleForIndex", 3
+                    | op when op = OpCodes.Ldc_I4_6 -> "trackDifficultyForIndex", 4
+                    | op when op = OpCodes.Ldc_I4_7 -> "trackLengthForIndex", 4
+                    | _ -> failwith "unknown opcode for data_tracktitles patch"
 
-        e.MoveNext() |> ignore // conv.i4
-        e.MoveNext() |> ignore // blt
-
-        // Put in our call instead
-        yield CodeInstruction (OpCodes.Ldarg_0)
-        yield CodeInstruction.Call(typeof<TrackrefAccessor>, "doLevelSelectStart", [| typeof<LevelSelectController> |])
-
-        // Yield everything else
-        while e.MoveNext() do
-            yield e.Current
-    }
+                matcher
+                    .RemoveInstruction() // remove ldsfld
+                    .Advance(1) // keep the ldsfld for trackindex
+                    .RemoveInstructions(removeCount) // remove array indexing & int parsing...
+                    .Insert([|
+                        CodeInstruction.Call(typeof<TrackrefAccessor>, methodName, [| typeof<int> |])
+                    |]) |> ignore
+            )
+            .InstructionEnumeration()

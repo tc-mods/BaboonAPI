@@ -13,6 +13,10 @@ type private TrackCountAccessor() =
 type TrackCountPatches() =
     static let trackrefs_f =
         AccessTools.Field(typeof<GlobalVariables>, nameof GlobalVariables.data_trackrefs)
+    static let tracktitles_f =
+        AccessTools.Field(typeof<GlobalVariables>, nameof GlobalVariables.data_tracktitles)
+    static let progression_champ_f =
+        AccessTools.Field(typeof<SavedCardCollection>, "progression_trombone_champ")
 
     /// Patches anywhere that reads the trackref length and replaces it with the "true" track count
     [<HarmonyTranspiler>]
@@ -49,3 +53,20 @@ type TrackCountPatches() =
                 .SetInstruction(CodeInstruction.Call(typeof<TrackCountAccessor>, "trackrefByIndex", [| typeof<int> |]))
                 |> ignore
         ).InstructionEnumeration()
+
+    [<HarmonyTranspiler>]
+    [<HarmonyPatch(typeof<LevelSelectController>, "advanceSongs")>]
+    static member PatchTitleLength(instructions: CodeInstruction seq): CodeInstruction seq =
+        CodeMatcher(instructions)
+            .MatchForward(false, [|
+                CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
+                CodeMatch OpCodes.Ldlen
+            |])
+            .InsertAndAdvance(CodeInstruction OpCodes.Ldarg_0)
+            .SetInstruction(CodeInstruction.LoadField(typeof<LevelSelectController>, "alltrackslist"))
+            .MatchForward(false, [|
+                CodeMatch OpCodes.Ldsfld
+                CodeMatch(fun ins -> ins.LoadsField(progression_champ_f))
+            |])
+            .RemoveInstructions(7) // remove the trombone champ check, we already filtered it out
+            .InstructionEnumeration()

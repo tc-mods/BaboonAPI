@@ -92,7 +92,7 @@ type GameControllerPatch() =
             CodeMatch OpCodes.Ldelem_Ref
         |]).Repeat(fun matcher ->
             matcher.RemoveInstruction() // remove ldsfld
-                .Advance(3) // pos = first ldelem_ref
+                .Advance(2) // pos = first ldelem_ref
                 .RemoveInstructions(3)
                 .InsertAndAdvance(CodeInstruction.Call(typeof<GameControllerExtension>, "fetchTrackTitle", [| typeof<int> |]))
                 |> ignore
