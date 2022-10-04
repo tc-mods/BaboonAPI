@@ -3,7 +3,15 @@
 Trombone Champ modding API, aiming to provide nicer hooks to
 promote compatibility & improve the base game code
 
-## Usage
+## Installing
+
+1. Install BepInEx over the base game
+2. Install FSharp.Core - `FSharp.Core.dll` gets put in `bin/Release/net472`
+   by the build process, I usually put it in `BepInEx/core`
+3. Put `BaboonAPI.dll` in the plugins folder
+4. Toot!
+
+## Developer Usage
 
 A quick-and-dirty example plugin for the track registration API:
 
