@@ -44,6 +44,11 @@ type internal BaseGameTrack(trackref: string, data: string[], index: int) =
             | "einefinal" -> GlobalVariables.localsave.progression_trombone_champ
             | _ -> true
 
+        member this.LoadChart() =
+            let path = $"{Application.streamingAssetsPath}/leveldata/{trackref}.tmb"
+            use stream = File.Open(path, FileMode.Open)
+            BinaryFormatter().Deserialize(stream) :?> SavedLevel
+
 type internal BaseGameTrackRegistry(songs: SongData) =
     interface Callback with
         override this.OnRegisterTracks gen = seq {
@@ -54,7 +59,7 @@ type internal BaseGameTrackRegistry(songs: SongData) =
 [<HarmonyPatch(typeof<SaverLoader>, "loadLevelData")>]
 type LoaderPatch() =
     static member Prefix () =
-        let path = Application.streamingAssetsPath + "/leveldata/songdata.tchamp"
+        let path = $"{Application.streamingAssetsPath}/leveldata/songdata.tchamp"
         if File.Exists path then
             use stream = File.Open (path, FileMode.Open)
             let data = BinaryFormatter().Deserialize(stream) :?> SongData

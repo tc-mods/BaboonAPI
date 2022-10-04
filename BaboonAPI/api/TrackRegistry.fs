@@ -23,8 +23,11 @@ type public TromboneTrack =
     abstract tempo: int
     abstract length: int
     abstract trackindex: int
+    
+    /// Called during level loading to load the chart data.
+    abstract LoadChart: unit -> SavedLevel
 
-    /// Called during level loading to actually load the track.
+    /// Called during level loading to load assets, such as backgrounds and music.
     abstract LoadTrack: unit -> LoadedTromboneTrack
 
     /// Whether this track is visible in the track selector

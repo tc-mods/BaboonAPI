@@ -65,6 +65,9 @@ type private GameControllerExtension() =
         loadedTrack <- Some l
 
         ()
+        
+    static member LoadChart(trackref: string): SavedLevel =
+        (TrackAccessor.fetchTrack trackref).LoadChart()
 
     static member Unload() =
         match loadedTrack with
@@ -119,6 +122,25 @@ type GameControllerPatch() =
                 CodeInstruction.Call(typeof<GameControllerExtension>, "Infix")
             |])
             .AddLabels(startLabels) // re-apply start labels
+            .InstructionEnumeration()
+
+    [<HarmonyTranspiler>]
+    [<HarmonyPatch(typeof<GameController>, "tryToLoadLevel")>]
+    static member LoadChartTranspiler(instructions: CodeInstruction seq): CodeInstruction seq =
+        let matcher = CodeMatcher(instructions)
+        matcher.MatchForward(true, [|
+            CodeMatch OpCodes.Ldnull
+            CodeMatch OpCodes.Stloc_1
+        |]) |> ignore
+        
+        let endpos = matcher.Pos
+        matcher.RemoveInstructionsInRange(0, endpos)
+            .Start()
+            .Insert([|
+                CodeInstruction OpCodes.Ldarg_1
+                CodeInstruction.Call(typeof<GameControllerExtension>, "LoadChart", [| typeof<string> |])
+                CodeInstruction OpCodes.Stloc_2
+            |])
             .InstructionEnumeration()
 
     [<HarmonyPrefix>]
