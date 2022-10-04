@@ -68,6 +68,12 @@ namespace Chimpanzee
             var bundle = AssetBundle.LoadFromFile("MyCoolBundle");
             return new LoadedChimpTrack(trackref, bundle);
         }
+        
+        public SavedLevel LoadChart()
+        {
+            // Load the actual chart data
+            return new SavedLevel();
+        }
 
         public bool IsVisible()
         {
