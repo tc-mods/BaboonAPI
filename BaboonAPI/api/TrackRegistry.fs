@@ -30,17 +30,18 @@ type public TromboneTrack =
     /// Whether this track is visible in the track selector
     abstract IsVisible: unit -> bool
 
+type public TrackIndexGenerator() =
+    let mutable index = 0
+
+    member _.nextIndex () =
+        index <- index + 1
+        index - 1
+
 type public Callback =
-    abstract OnRegisterTracks: int -> TromboneTrack seq
+    abstract OnRegisterTracks: TrackIndexGenerator -> TromboneTrack seq
 
 let EVENT =
     EventFactory.create (fun listeners ->
-        let mutable index = 0
-        let collector (l: Callback) =
-            let s = l.OnRegisterTracks(index) |> Seq.cache
-            index <- index + (s |> Seq.length)
-            s
-
         { new Callback with
-            member _.OnRegisterTracks(index) =
-                listeners |> Seq.collect collector })
+            member _.OnRegisterTracks(gen) =
+                listeners |> Seq.collect (fun l -> l.OnRegisterTracks gen) })

@@ -4,7 +4,7 @@ open BaboonAPI.Hooks.Tracks
 
 let private tracks =
     lazy
-        EVENT.invoker.OnRegisterTracks(0)
+        EVENT.invoker.OnRegisterTracks(TrackIndexGenerator())
         |> Seq.map (fun track -> track.trackref, track)
         |> Map.ofSeq
 

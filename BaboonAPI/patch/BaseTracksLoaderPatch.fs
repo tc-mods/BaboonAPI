@@ -21,7 +21,7 @@ type internal BaseGameLoadedTrack(trackref: string, bundle: AssetBundle) =
 
         member this.trackref = trackref
 
-type internal BaseGameTrack(trackref: string, data: string[], startIndex: int) =
+type internal BaseGameTrack(trackref: string, data: string[], index: int) =
     interface TromboneTrack with
         member _.trackref = trackref
         member _.trackname_long = data[0]
@@ -33,7 +33,7 @@ type internal BaseGameTrack(trackref: string, data: string[], startIndex: int) =
         member _.difficulty = int data[6]
         member _.length = int data[7]
         member _.tempo = int data[8]
-        member _.trackindex = startIndex + int data[9]
+        member _.trackindex = index
 
         member this.LoadTrack() =
             let bundle = AssetBundle.LoadFromFile $"{Application.dataPath}/StreamingAssets/trackassets/{trackref}"
@@ -46,9 +46,9 @@ type internal BaseGameTrack(trackref: string, data: string[], startIndex: int) =
 
 type internal BaseGameTrackRegistry(songs: SongData) =
     interface Callback with
-        override this.OnRegisterTracks startIndex = seq {
+        override this.OnRegisterTracks gen = seq {
             for ref, array in Seq.zip songs.data_trackrefs songs.data_tracktitles do
-                yield BaseGameTrack (ref, array, startIndex)
+                yield BaseGameTrack (ref, array, gen.nextIndex())
         }
 
 [<HarmonyPatch(typeof<SaverLoader>, "loadLevelData")>]
