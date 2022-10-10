@@ -7,11 +7,6 @@ open BepInEx.Logging
 open HarmonyLib
 open UnityEngine
 
-module SeqUtil =
-    let partition predicate (s: seq<'a>) =
-        let i = s |> Seq.findIndex predicate
-        Seq.take i s, Seq.item i s, Seq.skip (i + 1) s
-
 type private FreePlayLoader() =
     let bundle = AssetBundle.LoadFromFile $"{Application.dataPath}/StreamingAssets/trackassets/freeplay"
 
@@ -65,7 +60,7 @@ type private GameControllerExtension() =
         loadedTrack <- Some l
 
         ()
-        
+
     static member LoadChart(trackref: string): SavedLevel =
         (TrackAccessor.fetchTrack trackref).LoadChart()
 
@@ -132,7 +127,7 @@ type GameControllerPatch() =
             CodeMatch OpCodes.Ldnull
             CodeMatch OpCodes.Stloc_1
         |]) |> ignore
-        
+
         let endpos = matcher.Pos
         matcher.RemoveInstructionsInRange(0, endpos)
             .Start()
