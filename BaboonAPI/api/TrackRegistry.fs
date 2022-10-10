@@ -1,4 +1,14 @@
-﻿module BaboonAPI.Hooks.Tracks
+﻿/// <summary>
+/// API for registering new tracks.
+/// </summary>
+/// <remarks>
+/// <code>open BaboonAPI.Hooks
+///
+///member _.Awake () =
+///    Tracks.EVENT.Register(MyTrackRegistrationListener())
+/// </code>
+/// </remarks>
+module BaboonAPI.Hooks.Tracks
 
 open System
 open BaboonAPI.Event
@@ -23,7 +33,7 @@ type public TromboneTrack =
     abstract tempo: int
     abstract length: int
     abstract trackindex: int
-    
+
     /// Called during level loading to load the chart data.
     abstract LoadChart: unit -> SavedLevel
 
