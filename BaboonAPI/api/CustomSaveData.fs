@@ -18,14 +18,14 @@ type ICustomSaveData<'a> =
 
 /// Represents something with the capability to save or load objects.
 type SaverCapability =
-    /// <summary>Call to attach an object to the current save.
-    ///
+    /// <summary>Call to attach an object to the current save.</summary>
+    /// <remarks>
     /// You should provide a unique name for each attachment.
     ///
     /// The object's <see cref="M:BaboonAPI.Hooks.Saves.ICustomSaveData`1.Save">Save</see> and
     /// <see cref="M:BaboonAPI.Hooks.Saves.ICustomSaveData`1.Load(`0)">Load</see>
     /// functions will be called when the game saves or loads.
-    /// </summary>
+    /// </remarks>
     /// <param name="name">Name to save this object as.</param>
     /// <param name="target">Serializable object</param>
     abstract Attach: name: string -> target: ICustomSaveData<obj> -> unit
@@ -52,12 +52,11 @@ type private PluginSaverLoader(pluginGuid: string, attacher: SaverCapability -> 
 module CustomSaveRegistry =
     let mutable private pluginSavers: PluginSaverLoader list = []
 
-    /// <summary>
-    /// Register the saveable objects for your plugin.
-    ///
+    /// <summary>Register the saveable objects for your plugin.</summary>
+    /// <remarks>
     /// Note that the <paramref name="attach" /> callback will be called multiple times,
     /// and thus should not have any side effects.
-    /// </summary>
+    /// </remarks>
     /// <param name="info">Plugin info instance, used to namespace save entries.</param>
     /// <param name="attach">Attachment callback, call
     /// <see cref="M:BaboonAPI.Hooks.Saves.SaverCapability.Attach(System.String,BaboonAPI.Hooks.Saves.ICustomSaveData{System.Object})">

@@ -5,6 +5,13 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <RepositoryUrl>https://gitlab.com/hedgehog1029/baboonapi/</RepositoryUrl>
+        <FsDocsLicenseLink>https://gitlab.com/hedgehog1029/baboonapi/-/blob/master/LICENSE.md</FsDocsLicenseLink>
+        <FsDocsReleaseNotesLink>#</FsDocsReleaseNotesLink>
+        <RepositoryType>git</RepositoryType>
+    </PropertyGroup>
+
     <ItemGroup>
         <Compile Include="events\EventBus.fs" />
         <Compile Include="api\TrackRegistry.fs" />
