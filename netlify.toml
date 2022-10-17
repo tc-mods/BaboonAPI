@@ -1,3 +1,3 @@
-﻿[build]
+[build]
 publish = "output/"
-command = "dotnet tool install fsdocs-tool && fsdocs build"
+command = "dotnet tool install --global fsdocs-tool && fsdocs build"
