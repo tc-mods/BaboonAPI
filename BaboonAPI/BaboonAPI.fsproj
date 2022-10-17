@@ -6,6 +6,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
+        <PackageProjectUrl>https://baboonapi.trombone.wiki/</PackageProjectUrl>
         <RepositoryUrl>https://gitlab.com/hedgehog1029/baboonapi/</RepositoryUrl>
         <FsDocsLicenseLink>https://gitlab.com/hedgehog1029/baboonapi/-/blob/master/LICENSE.md</FsDocsLicenseLink>
         <FsDocsReleaseNotesLink>#</FsDocsReleaseNotesLink>
