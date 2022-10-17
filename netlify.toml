@@ -1,0 +1,3 @@
+﻿[build]
+publish = "output/"
+command = "dotnet tool install fsdocs-tool && fsdocs build"
