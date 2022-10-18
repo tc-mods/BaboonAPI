@@ -1,4 +1,4 @@
-﻿# BaboonAPI
+# BaboonAPI
 
 Trombone Champ modding API, aiming to provide nicer hooks to
 promote compatibility & improve the base game code.
