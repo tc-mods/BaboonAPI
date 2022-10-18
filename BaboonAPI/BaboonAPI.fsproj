@@ -5,6 +5,7 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
+    <!-- fsdocs settings -->
     <PropertyGroup>
         <PackageProjectUrl>https://baboonapi.trombone.wiki/</PackageProjectUrl>
         <RepositoryUrl>https://github.com/tc-mods/BaboonAPI/</RepositoryUrl>
@@ -12,6 +13,31 @@
         <FsDocsReleaseNotesLink>#</FsDocsReleaseNotesLink>
         <RepositoryType>git</RepositoryType>
     </PropertyGroup>
+
+    <!-- nuget settings -->
+    <PropertyGroup>
+        <PackageId>TromboneChamp.BaboonAPI</PackageId>
+        <Title>BaboonAPI</Title>
+        <Version>1.1.0</Version>
+        <Authors>offbeatwitch</Authors>
+        <Company>TromboneChamps</Company>
+        <PackageTags>Trombone Champ</PackageTags>
+        <Description>Trombone Champ modding API</Description>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>icon.png</PackageIcon>
+        <PackageLicenseUrl>https://github.com/tc-mods/BaboonAPI/blob/master/LICENSE.md</PackageLicenseUrl>
+        <DefaultLanguage>en</DefaultLanguage>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(Configuration)' == 'Release'">
+        <None Include="$(SolutionDir)thunderstore\README.md" Pack="true" PackagePath="\"/>
+        <None Include="$(SolutionDir)thunderstore\icon.png" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+    <!-- end nuget config -->
 
     <ItemGroup>
         <Compile Include="events\EventBus.fs" />
