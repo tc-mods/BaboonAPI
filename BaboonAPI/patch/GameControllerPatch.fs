@@ -13,7 +13,7 @@ type private FreePlayLoader() =
     interface LoadedTromboneTrack with
         member this.trackref = "freeplay"
         member this.LoadAudio() =
-            null // skip consuming this below.
+            { Clip = null; Volume = 1.0f } // skip consuming this below.
 
         member this.LoadBackground() =
             bundle.LoadAsset<GameObject> "BGCam_freeplay"
@@ -37,8 +37,8 @@ type private GameControllerExtension() =
 
         if not instance.freeplay then
             let audio = l.LoadAudio()
-            instance.musictrack.clip <- audio.clip
-            instance.musictrack.volume <- audio.volume
+            instance.musictrack.clip <- audio.Clip
+            instance.musictrack.volume <- audio.Volume
 
         let bgObj = Object.Instantiate<GameObject>(
             l.LoadBackground(), Vector3.zero, Quaternion.identity, instance.bgholder.transform)

@@ -14,6 +14,11 @@ open System
 open BaboonAPI.Event
 open UnityEngine
 
+/// Loaded audio clip & volume
+type public TrackAudio =
+    { Clip: AudioClip
+      Volume: float32 }
+
 /// Loaded track assets, disposed when a level ends
 type public LoadedTromboneTrack =
     inherit IDisposable
@@ -21,7 +26,7 @@ type public LoadedTromboneTrack =
     abstract trackref: string
 
     /// Load the audio clip used for this level
-    abstract LoadAudio: unit -> AudioSource
+    abstract LoadAudio: unit -> TrackAudio
 
     /// Load the background object used for this level
     abstract LoadBackground: unit -> GameObject
