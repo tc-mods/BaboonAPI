@@ -9,12 +9,13 @@ open HarmonyLib
 
 type private TrackrefAccessor() =
     static let logger = Logger.CreateLogSource "BaboonAPI.TrackrefAccessor"
-    
-    static let makeSingleTrackData (track: TromboneTrack) =
+
+    static let makeSingleTrackData (rt: TrackAccessor.RegisteredTrack) =
+        let track = rt.track
         let data = SingleTrackData()
         data.trackname_long <- track.trackname_long
         data.trackname_short <- track.trackname_short
-        data.trackindex <- track.trackindex
+        data.trackindex <- rt.trackIndex
         data.artist <- track.artist
         data.year <- track.year
         data.desc <- track.desc
@@ -29,8 +30,7 @@ type private TrackrefAccessor() =
         else
             None
 
-    static member finalLevelIndex () =
-        (TrackAccessor.fetchTrack "einefinal").trackindex
+    static member finalLevelIndex () = TrackAccessor.fetchTrackIndex "einefinal"
 
     static member trackrefForIndex i = (TrackAccessor.fetchTrackByIndex i).trackref
     static member trackTitleForIndex i = (TrackAccessor.fetchTrackByIndex i).trackname_long
@@ -125,7 +125,7 @@ type TrackTitlePatches() =
                                [| typeof<LevelSelectController>; typeof<List<SingleTrackData>> |])
             |])
             .InstructionEnumeration()
-    
+
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<PointSceneController>, "Start")>]
     [<HarmonyPatch(typeof<PointSceneController>, "getTootsNum")>]

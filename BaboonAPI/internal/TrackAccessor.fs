@@ -5,7 +5,11 @@ open BaboonAPI.Hooks.Tracks
 
 exception DuplicateTrackrefException of string
 
-let private checkForDuplicates (tracks: seq<string * TromboneTrack>): seq<string * TromboneTrack> = seq {
+type RegisteredTrack =
+    { track: TromboneTrack
+      trackIndex: int }
+
+let private checkForDuplicates (tracks: seq<string * RegisteredTrack>): seq<string * RegisteredTrack> = seq {
     let seen = HashSet()
     for trackref, track in tracks do
         if seen.Add trackref then
@@ -16,8 +20,9 @@ let private checkForDuplicates (tracks: seq<string * TromboneTrack>): seq<string
 
 let private tracks =
     lazy
-        EVENT.invoker.OnRegisterTracks(TrackIndexGenerator())
-        |> Seq.map (fun track -> track.trackref, track)
+        EVENT.invoker.OnRegisterTracks()
+        |> Seq.indexed
+        |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
         |> checkForDuplicates
         |> Map.ofSeq
 
@@ -27,11 +32,13 @@ let private tracksByIndex =
             tracks.Value.Values |> List.ofSeq
 
         unsorted
-        |> List.permute (fun i -> unsorted[i].trackindex)
+        |> List.permute (fun i -> unsorted[i].trackIndex)
 
-let fetchTrackByIndex (id: int) : TromboneTrack = tracksByIndex.Value[id]
+let fetchTrackByIndex (id: int) : TromboneTrack = tracksByIndex.Value[id].track
 
-let fetchTrack (ref: string) = tracks.Value[ref]
+let fetchTrack (ref: string) = tracks.Value[ref].track
+
+let fetchTrackIndex (ref: string) = tracks.Value[ref].trackIndex
 
 let trackCount () = tracksByIndex.Value.Length
 

@@ -43,7 +43,6 @@ type public TromboneTrack =
     abstract difficulty: int
     abstract tempo: int
     abstract length: int
-    abstract trackindex: int
 
     /// Called during level loading to load the chart data.
     abstract LoadChart: unit -> SavedLevel
@@ -54,24 +53,14 @@ type public TromboneTrack =
     /// Whether this track is visible in the track selector
     abstract IsVisible: unit -> bool
 
-/// Ensures track indexes are sequential
-type public TrackIndexGenerator() =
-    let mutable index = 0
-
-    /// Get the next available track index
-    member _.nextIndex () =
-        index <- index + 1
-        index - 1
-
 /// Track registration callback
 type public Callback =
     /// <summary>Called when registering tracks.</summary>
-    /// <remarks>You should use the index generator <paramref name="gen" /> for track indexes!</remarks>
-    abstract OnRegisterTracks: gen: TrackIndexGenerator -> TromboneTrack seq
+    abstract OnRegisterTracks: unit -> TromboneTrack seq
 
 /// Track registration event
 let EVENT =
     EventFactory.create (fun listeners ->
         { new Callback with
-            member _.OnRegisterTracks(gen) =
-                listeners |> Seq.collect (fun l -> l.OnRegisterTracks gen) })
+            member _.OnRegisterTracks () =
+                listeners |> Seq.collect (fun l -> l.OnRegisterTracks()) })
