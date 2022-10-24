@@ -14,6 +14,7 @@ module private CustomSaveController =
     exception IncompatibleVersion of int * int
 
     [<Serializable>]
+    [<CLIMutable>]
     type BaboonSaveData =
         { Version: int
           PluginData: Map<string, obj> }
