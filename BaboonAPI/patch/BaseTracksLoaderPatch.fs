@@ -3,15 +3,16 @@
 open System.IO
 open System.Runtime.Serialization.Formatters.Binary
 open BaboonAPI.Hooks.Tracks
+open BepInEx.Logging
 open HarmonyLib
 open UnityEngine
 
 type internal BaseGameLoadedTrack(trackref: string, bundle: AssetBundle) =
     interface LoadedTromboneTrack with
         member this.LoadAudio() =
-            Debug.Log $"Loading music_{trackref} from bundle {bundle}"
             let obj = bundle.LoadAsset<GameObject>($"music_{trackref}")
-            obj.GetComponent<AudioSource>()
+            let src = obj.GetComponent<AudioSource>()
+            { Clip = src.clip; Volume = src.volume }
 
         member this.LoadBackground() =
             bundle.LoadAsset<GameObject> $"BGCam_{trackref}"
@@ -21,7 +22,7 @@ type internal BaseGameLoadedTrack(trackref: string, bundle: AssetBundle) =
 
         member this.trackref = trackref
 
-type internal BaseGameTrack(trackref: string, data: string[], index: int) =
+type internal BaseGameTrack(trackref: string, data: string[]) =
     interface TromboneTrack with
         member _.trackref = trackref
         member _.trackname_long = data[0]
@@ -33,7 +34,6 @@ type internal BaseGameTrack(trackref: string, data: string[], index: int) =
         member _.difficulty = int data[6]
         member _.length = int data[7]
         member _.tempo = int data[8]
-        member _.trackindex = index
 
         member this.LoadTrack() =
             let bundle = AssetBundle.LoadFromFile $"{Application.dataPath}/StreamingAssets/trackassets/{trackref}"
@@ -51,13 +51,15 @@ type internal BaseGameTrack(trackref: string, data: string[], index: int) =
 
 type internal BaseGameTrackRegistry(songs: SongData) =
     interface Callback with
-        override this.OnRegisterTracks gen = seq {
+        override this.OnRegisterTracks () = seq {
             for ref, array in Seq.zip songs.data_trackrefs songs.data_tracktitles do
-                yield BaseGameTrack (ref, array, gen.nextIndex())
+                yield BaseGameTrack (ref, array)
         }
 
 [<HarmonyPatch(typeof<SaverLoader>, "loadLevelData")>]
 type LoaderPatch() =
+    static let logger = Logger.CreateLogSource "BaboonAPI.BaseTracksLoader"
+
     static member Prefix () =
         let path = $"{Application.streamingAssetsPath}/leveldata/songdata.tchamp"
         if File.Exists path then
@@ -66,6 +68,6 @@ type LoaderPatch() =
 
             EVENT.Register (BaseGameTrackRegistry data)
         else
-            Debug.Log("Could not find base game songdata.tchamp")
+            logger.LogWarning "Could not find base game songdata.tchamp"
 
         false

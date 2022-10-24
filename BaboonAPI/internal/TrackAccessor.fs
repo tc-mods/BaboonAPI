@@ -1,4 +1,4 @@
-﻿module BaboonAPI.Internal.TrackAccessor
+﻿module internal BaboonAPI.Internal.TrackAccessor
 
 open System.Collections.Generic
 open BaboonAPI.Hooks.Tracks
