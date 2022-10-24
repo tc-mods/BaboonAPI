@@ -4,9 +4,12 @@ open System.Collections.Generic
 open System.Reflection.Emit
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
+open BepInEx.Logging
 open HarmonyLib
 
 type private TrackrefAccessor() =
+    static let logger = Logger.CreateLogSource "BaboonAPI.TrackrefAccessor"
+    
     static let makeSingleTrackData (track: TromboneTrack) =
         let data = SingleTrackData()
         data.trackname_long <- track.trackname_long
@@ -36,9 +39,14 @@ type private TrackrefAccessor() =
 
     static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: List<SingleTrackData>) =
         instance.sortdrop.SetActive false
-        TrackAccessor.allTracks()
-        |> Seq.choose makeSingleTrackData
-        |> alltrackslist.AddRange
+        try
+            TrackAccessor.allTracks()
+            |> Seq.choose makeSingleTrackData
+            |> alltrackslist.AddRange
+        with
+        | TrackAccessor.DuplicateTrackrefException trackref ->
+            // TODO: Show an error popup in game? The game doesn't have anything for this...
+            logger.LogFatal $"Duplicate trackref {trackref}, songs not loading!"
 
 [<HarmonyPatch>]
 type FinalLevelPatches() =
