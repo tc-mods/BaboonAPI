@@ -18,7 +18,7 @@
     <PropertyGroup>
         <PackageId>TromboneChamp.BaboonAPI</PackageId>
         <Title>BaboonAPI</Title>
-        <Version>1.1.1</Version>
+        <Version>2.0.0-pre</Version>
         <Authors>offbeatwitch</Authors>
         <Company>TromboneChamps</Company>
         <PackageTags>Trombone Champ</PackageTags>
@@ -34,8 +34,8 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(Configuration)' == 'Release'">
-        <None Include="$(SolutionDir)thunderstore\README.md" Pack="true" PackagePath="\"/>
-        <None Include="$(SolutionDir)thunderstore\icon.png" Pack="true" PackagePath="\"/>
+        <None Include="$(SolutionDir)thunderstore\README.md" Pack="true" PackagePath="\" />
+        <None Include="$(SolutionDir)thunderstore\icon.png" Pack="true" PackagePath="\" />
     </ItemGroup>
     <!-- end nuget config -->
 
@@ -65,8 +65,8 @@
     <Target Name="ThunderstoreZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
         <Delete Files="$(OutDir)thunderstore" />
         <Delete Files="$(OutDir)$(ProjectName)-thunderstore.zip" />
-        <Copy SourceFiles="@(ThunderstoreAssets)" DestinationFolder="$(OutDir)thunderstore"/>
-        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(OutDir)thunderstore/BepInEx/plugins"/>
+        <Copy SourceFiles="@(ThunderstoreAssets)" DestinationFolder="$(OutDir)thunderstore" />
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(OutDir)thunderstore/BepInEx/plugins" />
         <ZipDirectory DestinationFile="$(OutDir)$(ProjectName)-thunderstore.zip" SourceDirectory="$(OutDir)thunderstore" />
     </Target>
 </Project>
