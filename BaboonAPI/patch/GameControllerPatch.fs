@@ -15,7 +15,7 @@ type private FreePlayLoader() =
         member this.LoadAudio() =
             { Clip = null; Volume = 1.0f } // skip consuming this below.
 
-        member this.LoadBackground() =
+        member this.LoadBackground _ctx =
             bundle.LoadAsset<GameObject> "BGCam_freeplay"
 
         member this.Dispose() =
@@ -40,8 +40,9 @@ type private GameControllerExtension() =
             instance.musictrack.clip <- audio.Clip
             instance.musictrack.volume <- audio.Volume
 
+        let context = BackgroundContext instance
         let bgObj = Object.Instantiate<GameObject>(
-            l.LoadBackground(), Vector3.zero, Quaternion.identity, instance.bgholder.transform)
+            l.LoadBackground context, Vector3.zero, Quaternion.identity, instance.bgholder.transform)
 
         bgObj.transform.localPosition <- Vector3.zero
         instance.bgcontroller.fullbgobject <- bgObj

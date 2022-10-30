@@ -14,7 +14,7 @@ type internal BaseGameLoadedTrack(trackref: string, bundle: AssetBundle) =
             let src = obj.GetComponent<AudioSource>()
             { Clip = src.clip; Volume = src.volume }
 
-        member this.LoadBackground() =
+        member this.LoadBackground _ctx =
             bundle.LoadAsset<GameObject> $"BGCam_{trackref}"
 
         member this.Dispose() =

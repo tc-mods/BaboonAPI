@@ -18,6 +18,11 @@ open UnityEngine
 type public TrackAudio =
     { Clip: AudioClip
       Volume: float32 }
+    
+/// Context passed to LoadBackground callback
+type public BackgroundContext(controller: GameController) =
+    /// Game controller that is currently attempting to load this background
+    member _.controller = controller
 
 /// Loaded track assets, disposed when a level ends
 type public LoadedTromboneTrack =
@@ -29,7 +34,7 @@ type public LoadedTromboneTrack =
     abstract LoadAudio: unit -> TrackAudio
 
     /// Load the background object used for this level
-    abstract LoadBackground: unit -> GameObject
+    abstract LoadBackground: ctx: BackgroundContext -> GameObject
 
 /// Represents a playable track
 type public TromboneTrack =
