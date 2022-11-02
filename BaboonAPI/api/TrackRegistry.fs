@@ -1,24 +1,27 @@
-﻿/// <summary>
-/// API for registering new tracks.
-/// </summary>
-/// <remarks>
-/// <code>open BaboonAPI.Hooks
-///
-///member _.Awake () =
-///    Tracks.EVENT.Register MyTrackRegistrationListener()
-/// </code>
-/// </remarks>
-module BaboonAPI.Hooks.Tracks
+﻿namespace BaboonAPI.Hooks.Tracks
 
 open System
 open BaboonAPI.Event
 open UnityEngine
 
-/// Loaded audio clip & volume
+/// <namespacedoc>
+/// <summary>
+/// API for registering new tracks.
+/// </summary>
+/// <remarks>
+/// <code>open BaboonAPI.Hooks.Tracks
+///
+///member _.Awake () =
+///    TrackRegistrationEvent.EVENT.Register MyTrackRegistrationListener()
+/// </code>
+/// </remarks>
+/// </namespacedoc>
+///
+/// <summary>Loaded audio clip & volume</summary>
 type public TrackAudio =
     { Clip: AudioClip
       Volume: float32 }
-    
+
 /// Context passed to LoadBackground callback
 type public BackgroundContext(controller: GameController) =
     /// Game controller that is currently attempting to load this background
@@ -58,14 +61,16 @@ type public TromboneTrack =
     /// Whether this track is visible in the track selector
     abstract IsVisible: unit -> bool
 
-/// Track registration callback
-type public Callback =
-    /// <summary>Called when registering tracks.</summary>
-    abstract OnRegisterTracks: unit -> TromboneTrack seq
-
 /// Track registration event
-let EVENT =
-    EventFactory.create (fun listeners ->
-        { new Callback with
-            member _.OnRegisterTracks () =
-                listeners |> Seq.collect (fun l -> l.OnRegisterTracks()) })
+module TrackRegistrationEvent =
+    /// Track registration listener
+    type public Listener =
+        /// <summary>Called when registering tracks.</summary>
+        abstract OnRegisterTracks: unit -> TromboneTrack seq
+
+    /// Event bus
+    let EVENT =
+        EventFactory.create (fun listeners ->
+            { new Listener with
+                member _.OnRegisterTracks () =
+                    listeners |> Seq.collect (fun l -> l.OnRegisterTracks()) })

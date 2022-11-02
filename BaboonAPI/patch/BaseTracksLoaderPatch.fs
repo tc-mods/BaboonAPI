@@ -50,7 +50,7 @@ type internal BaseGameTrack(trackref: string, data: string[]) =
             BinaryFormatter().Deserialize(stream) :?> SavedLevel
 
 type internal BaseGameTrackRegistry(songs: SongData) =
-    interface Callback with
+    interface TrackRegistrationEvent.Listener with
         override this.OnRegisterTracks () = seq {
             for ref, array in Seq.zip songs.data_trackrefs songs.data_tracktitles do
                 yield BaseGameTrack (ref, array)
@@ -66,7 +66,7 @@ type LoaderPatch() =
             use stream = File.Open (path, FileMode.Open)
             let data = BinaryFormatter().Deserialize(stream) :?> SongData
 
-            EVENT.Register (BaseGameTrackRegistry data)
+            TrackRegistrationEvent.EVENT.Register (BaseGameTrackRegistry data)
         else
             logger.LogWarning "Could not find base game songdata.tchamp"
 

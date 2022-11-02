@@ -2,7 +2,6 @@
 
 open System.Collections.Generic
 open System.Reflection.Emit
-open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
 open BepInEx.Logging
 open HarmonyLib

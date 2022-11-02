@@ -20,7 +20,7 @@ let private checkForDuplicates (tracks: seq<string * RegisteredTrack>): seq<stri
 
 let private tracks =
     lazy
-        EVENT.invoker.OnRegisterTracks()
+        TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
         |> Seq.indexed
         |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
         |> checkForDuplicates
