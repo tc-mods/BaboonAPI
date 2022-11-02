@@ -6,18 +6,14 @@ open UnityEngine
 
 /// <namespacedoc>
 /// <summary>
-/// API for registering new tracks.
+/// Track registration &amp; loading APIs.
 /// </summary>
 /// <remarks>
-/// <code>open BaboonAPI.Hooks.Tracks
-///
-///member _.Awake () =
-///    TrackRegistrationEvent.EVENT.Register MyTrackRegistrationListener()
-/// </code>
+/// Provides hooks for registering tracks, plus loading custom charts, audio &amp; backgrounds.
 /// </remarks>
 /// </namespacedoc>
 ///
-/// <summary>Loaded audio clip & volume</summary>
+/// <summary>Loaded audio clip &amp; volume</summary>
 type public TrackAudio =
     { Clip: AudioClip
       Volume: float32 }
@@ -61,7 +57,16 @@ type public TromboneTrack =
     /// Whether this track is visible in the track selector
     abstract IsVisible: unit -> bool
 
-/// Track registration event
+/// <summary>
+/// Event-based API for registering new tracks.
+/// </summary>
+/// <remarks>
+/// <code>open BaboonAPI.Hooks.Tracks
+///
+///member _.Awake () =
+///    TrackRegistrationEvent.EVENT.Register MyTrackRegistrationListener()
+/// </code>
+/// </remarks>
 module TrackRegistrationEvent =
     /// Track registration listener
     type public Listener =

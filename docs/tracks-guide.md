@@ -4,7 +4,7 @@ Here's a simple dummy example for track registration:
 
 ```csharp
 using System.Collections.Generic;
-using BaboonAPI.Hooks;
+using BaboonAPI.Hooks.Tracks;
 using BepInEx;
 using UnityEngine;
 
@@ -17,25 +17,24 @@ namespace Chimpanzee
         private void Awake()
         {
             // Register a listener for the track registration event
-            Tracks.EVENT.Register(new ChimpanzeeTrackCallback());
+            TrackRegistrationEvent.EVENT.Register(new ChimpanzeeTrackCallback());
         }
     }
 
-    public class ChimpanzeeTrackCallback : Tracks.Callback
+    public class ChimpanzeeTrackCallback : TrackRegistrationEvent.Listener
     {
-        public IEnumerable<Tracks.TromboneTrack> OnRegisterTracks(Tracks.TrackIndexGenerator gen)
+        public IEnumerable<TromboneTrack> OnRegisterTracks()
         {
             // Load and return your tracks here.
-            // Important: Use `gen.nextIndex()` to generate track indexes!
             yield return new ChimpTrack("chimps", "Chimps Forever", "Chimps", "2022", "Me", "A cool track!",
-                "Weirdcore", 2, 120, 140, gen.nextIndex());
+                "Weirdcore", 2, 120, 140);
         }
     }
 
-    public class ChimpTrack : Tracks.TromboneTrack
+    public class ChimpTrack : TromboneTrack
     {
         public ChimpTrack(string trackref, string tracknameLong, string tracknameShort, string year, string artist,
-            string desc, string genre, int difficulty, int tempo, int length, int trackindex)
+            string desc, string genre, int difficulty, int tempo, int length)
         {
             this.trackref = trackref;
             trackname_long = tracknameLong;
@@ -47,10 +46,9 @@ namespace Chimpanzee
             this.difficulty = difficulty;
             this.tempo = tempo;
             this.length = length;
-            this.trackindex = trackindex;
         }
 
-        public Tracks.LoadedTromboneTrack LoadTrack()
+        public LoadedTromboneTrack LoadTrack()
         {
             var bundle = AssetBundle.LoadFromFile("MyCoolBundle");
             return new LoadedChimpTrack(trackref, bundle);
@@ -77,10 +75,9 @@ namespace Chimpanzee
         public int difficulty { get; }
         public int tempo { get; }
         public int length { get; }
-        public int trackindex { get; }
     }
 
-    public class LoadedChimpTrack : Tracks.LoadedTromboneTrack
+    public class LoadedChimpTrack : LoadedTromboneTrack
     {
         private readonly AssetBundle _assetBundle;
 
@@ -103,7 +100,7 @@ namespace Chimpanzee
             return obj.GetComponent<AudioSource>();
         }
 
-        public GameObject LoadBackground()
+        public GameObject LoadBackground(BackgroundContext ctx)
         {
             // Load or create a background GameObject
             return _assetBundle.LoadAsset<GameObject>($"BGCam_{trackref}");

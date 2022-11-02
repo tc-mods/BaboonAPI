@@ -113,7 +113,7 @@ namespace Chimpanzee
             return obj.GetComponent<AudioSource>();
         }
 
-        public GameObject LoadBackground()
+        public GameObject LoadBackground(BackgroundContext ctx)
         {
             // Load or create a background GameObject
             return _assetBundle.LoadAsset<GameObject>($"BGCam_{trackref}");
