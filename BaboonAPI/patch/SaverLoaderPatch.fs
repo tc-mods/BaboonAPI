@@ -16,8 +16,8 @@ module private CustomSaveController =
     [<Serializable>]
     [<CLIMutable>]
     type BaboonSaveData =
-        { Version: int
-          PluginData: Map<string, obj> }
+        { [<JsonProperty("Version")>] Version: int
+          [<JsonProperty("PluginData")>] PluginData: Map<string, obj> }
 
     let private serializer = JsonSerializer.Create()
 
