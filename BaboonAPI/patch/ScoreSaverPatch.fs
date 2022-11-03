@@ -17,7 +17,7 @@ type private BaseTrackScore(data: string[]) =
     override this.rank = rank data[1]
 
 type private BaseTrackScoreRegistry() =
-    interface ScoreLookupRegistry.Callback with
+    interface ScoreLookupRegistry.Listener with
         member this.AllScores() =
             GlobalVariables.localsave.data_trackscores |> Seq.map(fun data -> BaseTrackScore data)
 
@@ -68,7 +68,10 @@ type CheckScoresPatch =
         let mutable scores = ScoresHelper.ImportScores GlobalVariables.localsave.data_trackscores
 
         // Only pick base game tracks here. Everything else will get saved to our custom save
-        let missing = TrackAccessor.allTracks() |> Seq.filter(fun t -> t :? BaseGameTrack && not (scores.ContainsKey t.trackref))
+        let missing =
+            TrackAccessor.allTracks()
+            |> Seq.map(fun rt -> rt.track)
+            |> Seq.filter(fun t -> t :? BaseGameTrack && not (scores.ContainsKey t.trackref))
         let mutable shouldSave = false
         for track in missing do
             scores <- scores.Add (track.trackref, ScoresHelper.makeEmptyScore track.trackref)
@@ -140,6 +143,7 @@ type SaverLoaderPatch =
     static member CheckForUpdatedScore(songtag: string, newscore: int, newletterscore: string) =
         match ScoreLookupRegistry.lookup songtag with
         | Some score ->
+            // TODO mutate the saved score
             ()
         | None -> ()
 

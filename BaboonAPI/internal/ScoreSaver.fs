@@ -25,7 +25,7 @@ type private LoadedScore(trackref: string, loaded: SavedScore) =
 type private CustomScoreStorage() =
     let mutable scores: Map<string, TrackScore> = Map.empty
 
-    interface ScoreLookupRegistry.Callback with
+    interface ScoreLookupRegistry.Listener with
         member this.AllScores() = scores.Values
 
         member this.Lookup(trackref) = scores.TryFind trackref

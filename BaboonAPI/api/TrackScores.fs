@@ -52,12 +52,12 @@ type MutableTrackScore(trackref: string) =
         highscores <- (score :: highscores |> List.sortDescending |> List.take 5)
 
 module ScoreLookupRegistry =
-    type Callback =
+    type Listener =
         abstract Lookup: trackref: string -> TrackScore option
         abstract AllScores: unit -> TrackScore seq
 
-    let EVENT = EventFactory<Callback>.create(fun listeners ->
-        { new Callback with
+    let EVENT = EventFactory<Listener>.create(fun listeners ->
+        { new Listener with
             member _.Lookup trackref =
                 listeners |> Seq.map(fun l -> l.Lookup trackref) |> Seq.tryFind(fun it -> it.IsSome) |> Option.flatten
 
