@@ -8,20 +8,9 @@ open HarmonyLib
 open UnityEngine.UI
 
 type private BaseTrackScore(data: string[]) =
-    inherit TrackScore()
+    inherit SimpleTrackScore(data[0], data[2..7] |> Seq.map int |> Seq.toList, rank data[1])
 
-    let mappedScores = data[2..6] |> Seq.map int
-
-    override this.topScores = List.ofSeq mappedScores
-    override this.trackref = data[0]
-    override this.rank = rank data[1]
-
-type private BaseTrackScoreRegistry() =
-    interface ScoreLookupRegistry.Listener with
-        member this.AllScores() =
-            GlobalVariables.localsave.data_trackscores |> Seq.map(fun data -> BaseTrackScore data)
-
-        member this.Lookup(trackref) = failwith "todo"
+    override this.isBaseGameTrack = true
 
 type private ScoresHelper() =
     static member makeEmptyScore (trackref: string) =
@@ -59,26 +48,56 @@ type private ScoresHelper() =
         |> Seq.filter (fun score -> score.rank |> Option.contains Rank.S)
         |> Seq.length
 
+type private BaseTrackScoreRegistry() =
+    interface ScoreLookupRegistry.Listener with
+        member this.AllScores() =
+            (GlobalVariables.localsave.data_trackscores |> ScoresHelper.ImportScores).Values
+
+        member this.Lookup(trackref) =
+            GlobalVariables.localsave.data_trackscores
+            |> ScoresHelper.ImportScores
+            |> Map.tryFind trackref
+
+        member this.Save(score) =
+            // TODO probably do this more efficiently somehow
+            if score.isBaseGameTrack then
+                GlobalVariables.localsave.data_trackscores <- GlobalVariables.localsave.data_trackscores
+                |> ScoresHelper.ImportScores
+                |> Map.add score.trackref score
+                |> Map.values
+                |> ScoresHelper.ExportScores
+                true
+            else
+                false
+
+exception MissingScoreSaverException of string
+
 [<HarmonyPatch(typeof<SaveSlotController>)>]
 type CheckScoresPatch =
     [<HarmonyPrefix>]
     [<HarmonyPatch("checkScores")>]
     static member CheckScores(__instance: SaveSlotController) =
-        // Just patch this method to be less bad
-        let mutable scores = ScoresHelper.ImportScores GlobalVariables.localsave.data_trackscores
-
-        // Only pick base game tracks here. Everything else will get saved to our custom save
+        // Make sure all tracks have score entries
         let missing =
             TrackAccessor.allTracks()
             |> Seq.map(fun rt -> rt.track)
-            |> Seq.filter(fun t -> t :? BaseGameTrack && not (scores.ContainsKey t.trackref))
+            |> Seq.filter(fun t -> ScoreLookupRegistry.lookup t.trackref |> Option.isNone)
+
         let mutable shouldSave = false
+        let save = ScoreLookupRegistry.EVENT.invoker.Save
         for track in missing do
-            scores <- scores.Add (track.trackref, ScoresHelper.makeEmptyScore track.trackref)
-            shouldSave <- true
+            let ts: TrackScore =
+                if track :? BaseGameTrack then
+                    ScoresHelper.makeEmptyScore track.trackref
+                else
+                    SimpleTrackScore track.trackref
+
+            if save ts then
+                shouldSave <- true
+            else
+                raise (MissingScoreSaverException track.trackref)
 
         if shouldSave then
-            GlobalVariables.localsave.data_trackscores <- ScoresHelper.ExportScores scores.Values
             SaverLoader.updateSavedGame()
 
         false
@@ -128,7 +147,7 @@ type LatchControllerPatch =
             .InstructionEnumeration()
 
 [<HarmonyPatch(typeof<SaverLoader>)>]
-type SaverLoaderPatch =
+type ScoreSaverLoaderPatch =
     [<HarmonyPrefix>]
     [<HarmonyPatch("grabHighestScore")>]
     static member GrabHighestScore(songtag: string, __result: int outref) =
@@ -143,8 +162,12 @@ type SaverLoaderPatch =
     static member CheckForUpdatedScore(songtag: string, newscore: int, newletterscore: string) =
         match ScoreLookupRegistry.lookup songtag with
         | Some score ->
-            // TODO mutate the saved score
-            ()
+            rank newletterscore |> Option.iter score.upgradeRank
+            score.pushScore newscore
         | None -> ()
 
         false
+
+module ScoreSaverPatch =
+    let setup () =
+        ScoreLookupRegistry.EVENT.Register (BaseTrackScoreRegistry())

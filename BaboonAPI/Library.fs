@@ -1,6 +1,8 @@
 ﻿namespace BaboonAPI
 
 open System.Reflection
+open BaboonAPI.Internal.Scores
+open BaboonAPI.Patch
 open BepInEx
 open HarmonyLib
 
@@ -11,4 +13,8 @@ type BaboonPlugin() =
     member this.Awake() =
         this.Logger.LogInfo "Hello from BaboonAPI!"
 
-        Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), "ch.offbeatwit.baboonapi.plugin")
+        Harmony.CreateAndPatchAll(Assembly.GetExecutingAssembly(), "ch.offbeatwit.baboonapi.plugin") |> ignore
+
+        ScoreSaver.setup this.Info
+        ScoreSaverPatch.setup ()
+        ()

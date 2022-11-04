@@ -28,7 +28,7 @@ type SaverCapability =
     /// </remarks>
     /// <param name="name">Name to save this object as.</param>
     /// <param name="target">Serializable object</param>
-    abstract Attach: name: string -> target: ICustomSaveData<obj> -> unit
+    abstract Attach: name: string -> target: ICustomSaveData<'a> -> unit
 
 type private PluginSaverLoader(pluginGuid: string, attacher: SaverCapability -> unit) =
     member _.Save (pluginData: Map<string, obj>) =
@@ -43,7 +43,7 @@ type private PluginSaverLoader(pluginGuid: string, attacher: SaverCapability -> 
     member _.Load (pluginData: Map<string, obj>) =
         attacher { new SaverCapability with
                      member _.Attach name sd =
-                         pluginData[$"{pluginGuid}/{name}"] |> sd.Load }
+                         pluginData[$"{pluginGuid}/{name}"] :?> 'a |> sd.Load }
 
 /// <summary>Persistent data API</summary>
 /// <remarks>
