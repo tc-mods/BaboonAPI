@@ -1,6 +1,7 @@
 ﻿namespace BaboonAPI.Hooks.Saves
 
 open BepInEx
+open Newtonsoft.Json.Linq
 
 /// <summary>Implement if you want your class to be able to store persistent data.</summary>
 /// <remarks>
@@ -14,7 +15,13 @@ type ICustomSaveData<'a> =
 
     /// Called when saved data is loaded from disk.
     /// You can use this to restore your class's state.
-    abstract Load: 'a -> unit
+    abstract Load: data: 'a -> unit
+
+    /// <summary>Used to convert the incoming JSON back into your type.</summary>
+    /// <remarks>You should usually implement this function as follows:
+    /// <code>member this.Convert o = o.ToObject()</code>
+    /// </remarks>
+    abstract Convert: o: JObject -> 'a
 
 /// Represents something with the capability to save or load objects.
 type SaverCapability =
@@ -28,7 +35,7 @@ type SaverCapability =
     /// </remarks>
     /// <param name="name">Name to save this object as.</param>
     /// <param name="target">Serializable object</param>
-    abstract Attach: name: string -> target: ICustomSaveData<obj> -> unit
+    abstract Attach: name: string -> target: ICustomSaveData<'a> -> unit
 
 type private PluginSaverLoader(pluginGuid: string, attacher: SaverCapability -> unit) =
     member _.Save (pluginData: Map<string, obj>) =
@@ -40,10 +47,10 @@ type private PluginSaverLoader(pluginGuid: string, attacher: SaverCapability -> 
 
         pluginData
 
-    member _.Load (pluginData: Map<string, obj>) =
+    member _.Load (pluginData: Map<string, JObject>) =
         attacher { new SaverCapability with
                      member _.Attach name sd =
-                         pluginData[$"{pluginGuid}/{name}"] |> sd.Load }
+                         pluginData[$"{pluginGuid}/{name}"] |> sd.Convert |> sd.Load }
 
 /// <summary>Persistent data API</summary>
 /// <remarks>
@@ -66,8 +73,10 @@ module CustomSaveRegistry =
         ()
 
     let internal SaveAll () =
-        pluginSavers |> Seq.fold (fun state saver -> saver.Save state) Map.empty
+        pluginSavers
+        |> Seq.fold (fun state saver -> saver.Save state) Map.empty
+        |> Map.map (fun _ -> JObject.FromObject)
 
-    let internal LoadAll (pluginData: Map<string, obj>) =
+    let internal LoadAll (pluginData: Map<string, JObject>) =
         for saver in pluginSavers do
             saver.Load pluginData
