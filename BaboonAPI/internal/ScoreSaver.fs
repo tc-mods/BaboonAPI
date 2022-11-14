@@ -39,6 +39,8 @@ type private CustomScoreStorage() =
             let saved = scores |> Map.map(fun _ s -> { Rank = s.rankString; Scores = s.topScores })
             { Scores = saved }
 
+        member this.Convert o = o.ToObject()
+
 module ScoreSaver =
     let setup (info: PluginInfo) =
         let storage = CustomScoreStorage()
