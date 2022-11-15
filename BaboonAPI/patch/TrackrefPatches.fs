@@ -23,11 +23,7 @@ type private TrackrefAccessor() =
         data.length <- track.length
         data.tempo <- track.tempo
         data.trackref <- track.trackref
-
-        if track.IsVisible() then
-            Some data
-        else
-            None
+        data
 
     static member finalLevelIndex () = TrackAccessor.fetchTrackIndex "einefinal"
 
@@ -36,70 +32,27 @@ type private TrackrefAccessor() =
     static member trackDifficultyForIndex i = (TrackAccessor.fetchTrackByIndex i).difficulty
     static member trackLengthForIndex i = (TrackAccessor.fetchTrackByIndex i).length
 
+    static member fetchChosenTrack trackref =
+        TrackAccessor.fetchRegisteredTrack trackref |> makeSingleTrackData
+
     static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: List<SingleTrackData>) =
-        instance.sortdrop.SetActive false
         try
             TrackAccessor.allTracks()
-            |> Seq.choose makeSingleTrackData
+            |> Seq.filter (fun s -> s.track.IsVisible())
+            |> Seq.map makeSingleTrackData
             |> alltrackslist.AddRange
         with
         | TrackAccessor.DuplicateTrackrefException trackref ->
             // TODO: Show an error popup in game? The game doesn't have anything for this...
             logger.LogFatal $"Duplicate trackref {trackref}, songs not loading!"
 
-[<HarmonyPatch>]
-type FinalLevelPatches() =
-    static let trackrefs_f =
-        AccessTools.Field(typeof<GlobalVariables>, nameof GlobalVariables.data_trackrefs)
-
-    /// Final level check usually checks against track index, which is dumb.
-    /// This transpiler fixes that by returning the actual index of "einefinal", the final level.
-    [<HarmonyTranspiler>]
-    [<HarmonyPatch(typeof<CurtainController>, "loadNextScene")>]
-    [<HarmonyPatch(typeof<LockController>, "loadCharSelect")>]
-    static member Transpiler(instructions: CodeInstruction seq) : CodeInstruction seq = seq {
-        use iter = instructions.GetEnumerator()
-
-        while iter.MoveNext() do
-            let ins = iter.Current
-
-            if ins.LoadsField(trackrefs_f) then
-                yield CodeInstruction.Call(typeof<TrackrefAccessor>, "finalLevelIndex")
-
-                // skip the next 4 instructions, usually used for loading length
-                iter.MoveNext() |> ignore // IL_0092: ldlen
-                iter.MoveNext() |> ignore // IL_0093: conv.i4
-                iter.MoveNext() |> ignore // IL_0094: ldc.i4.1
-                iter.MoveNext() |> ignore // IL_0095: sub
-            else
-                yield ins
-    }
-
-[<HarmonyPatch>]
-type TrackRefPatches() =
-    static let trackrefs_f =
-        AccessTools.Field(typeof<GlobalVariables>, nameof (GlobalVariables.data_trackrefs))
-
-    /// Patch various GlobalVariable lookups of trackrefs to use our track registry instead
-    [<HarmonyTranspiler>]
-    [<HarmonyPatch(typeof<PointSceneController>, "Start")>]
-    [<HarmonyPatch(typeof<PointSceneController>, "updateSave")>]
-    [<HarmonyPatch(typeof<GameController>, "buildLevel")>]
-    static member Transpiler(instructions: CodeInstruction seq) : CodeInstruction seq =
-        let matcher = CodeMatcher(instructions).MatchForward(false, [|
-            CodeMatch(fun ins -> ins.LoadsField(trackrefs_f))
-            CodeMatch() // match anything
-            CodeMatch(OpCodes.Ldelem_Ref)
-        |])
-
-        matcher.Repeat(fun matcher ->
-            let lf_labels = matcher.Labels
-            matcher.RemoveInstruction()
-                .AddLabels(lf_labels) // shuffle labels onto new start
-                .Advance(1) // skip the load
-                .SetInstruction(CodeInstruction.Call(typeof<TrackrefAccessor>, "trackrefForIndex", [| typeof<int> |]))
-                |> ignore
-        ).InstructionEnumeration()
+[<HarmonyPatch(typeof<SaverLoader>, "loadTrackData")>]
+type TrackLoaderPatch() =
+    // Patches the track lookup function to use our registry :)
+    static member Prefix (trackref: string) =
+        GlobalVariables.chosen_track <- trackref
+        GlobalVariables.chosen_track_data <- TrackrefAccessor.fetchChosenTrack trackref
+        false
 
 [<HarmonyPatch>]
 type TrackTitlePatches() =
@@ -109,13 +62,20 @@ type TrackTitlePatches() =
     [<HarmonyPatch(typeof<LevelSelectController>, "Start")>]
     static member Transpiler(instructions: CodeInstruction seq): CodeInstruction seq =
         let matcher = CodeMatcher(instructions).MatchForward(true, [|
-            CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
-            CodeMatch OpCodes.Ldlen
+            CodeMatch(fun ins -> ins.LoadsConstant())
+            CodeMatch(fun ins -> ins.IsStloc())
         |])
 
+        let start = matcher.Pos
+
         matcher
-            .RemoveInstructionsInRange(0, matcher.Pos + 2) // Remove the whole start of the method
-            .Start() // Back to the beginning, insert our own call instead
+            .MatchForward(true, [|
+                CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
+                CodeMatch OpCodes.Ldlen
+            |])
+            .RemoveInstructionsInRange(start, matcher.Pos + 2) // Remove the for loop
+            .Start()
+            .Advance(start) // Go to where the for loop used to be
             .InsertAndAdvance([|
                 CodeInstruction OpCodes.Ldarg_0
                 CodeInstruction OpCodes.Ldarg_0
@@ -123,32 +83,4 @@ type TrackTitlePatches() =
                 CodeInstruction.Call(typeof<TrackrefAccessor>, "doLevelSelectStart",
                                [| typeof<LevelSelectController>; typeof<List<SingleTrackData>> |])
             |])
-            .InstructionEnumeration()
-
-    [<HarmonyTranspiler>]
-    [<HarmonyPatch(typeof<PointSceneController>, "Start")>]
-    [<HarmonyPatch(typeof<PointSceneController>, "getTootsNum")>]
-    static member PatchTitleLookup(instructions: CodeInstruction seq): CodeInstruction seq =
-        CodeMatcher(instructions)
-            .MatchForward(false, [|
-                CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
-                CodeMatch OpCodes.Ldsfld
-                CodeMatch OpCodes.Ldelem_Ref
-            |])
-            .Repeat(fun matcher ->
-                let methodName, removeCount =
-                    match matcher.InstructionAt(3).opcode with
-                    | op when op = OpCodes.Ldc_I4_0 -> "trackTitleForIndex", 3
-                    | op when op = OpCodes.Ldc_I4_6 -> "trackDifficultyForIndex", 4
-                    | op when op = OpCodes.Ldc_I4_7 -> "trackLengthForIndex", 4
-                    | _ -> failwith "unknown opcode for data_tracktitles patch"
-
-                matcher
-                    .RemoveInstruction() // remove ldsfld
-                    .Advance(1) // keep the ldsfld for trackindex
-                    .RemoveInstructions(removeCount) // remove array indexing & int parsing...
-                    .Insert([|
-                        CodeInstruction.Call(typeof<TrackrefAccessor>, methodName, [| typeof<int> |])
-                    |]) |> ignore
-            )
             .InstructionEnumeration()

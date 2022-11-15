@@ -42,13 +42,21 @@ type private ScoresHelper() =
         | Some score -> score.rankString
         | None -> "-"
 
+    /// Count S ranks... or alternatively just count played tracks
+    /// Only use this for showHatchCanvas!
     static member CountSRanks () =
-        ScoreLookupRegistry.AllScores()
-        |> Seq.filter (fun score -> score.rank |> Option.contains Rank.S)
-        |> Seq.length
+        if GlobalVariables.localsettings.acc_unlockhatches then
+            GlobalVariables.localsave.tracks_played / 4
+        else
+            ScoreLookupRegistry.AllScores()
+            |> Seq.filter (fun score -> score.rank |> Option.contains Rank.S)
+            |> Seq.length
 
 type private BaseTrackScoreRegistry() =
-    let baseGameSongList = SongData().data_trackrefs
+    let baseGameSongList =
+        SongData().data_tracktitles
+        |> Seq.map (fun s -> s[2])
+        |> Set.ofSeq
 
     interface TrackScoreStorage with
         member this.GetAllScores() =
@@ -59,7 +67,7 @@ type private BaseTrackScoreRegistry() =
             |> ScoresHelper.ImportScores
             |> Map.tryFind trackref
 
-        member this.Save(score) =
+        member this.Save score =
             // TODO probably do this more efficiently somehow
             if score.isBaseGameTrack then
                 GlobalVariables.localsave.data_trackscores <- GlobalVariables.localsave.data_trackscores
@@ -71,8 +79,8 @@ type private BaseTrackScoreRegistry() =
             else
                 false
 
-        member this.CanStore(trackref) =
-            baseGameSongList |> Array.contains trackref
+        member this.CanStore trackref =
+            baseGameSongList.Contains trackref
 
         member this.Priority = 0
 
@@ -90,7 +98,6 @@ type CheckScoresPatch =
             |> Seq.filter(fun t -> ScoreLookupRegistry.lookup t.trackref |> Option.isNone)
 
         let mutable shouldSave = false
-        let save = ScoreLookupRegistry.lookupStorage >> Option.map (fun s -> s.Save)
         for track in missing do
             let ts: TrackScore =
                 if track :? BaseGameTrack then
