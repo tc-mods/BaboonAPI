@@ -61,9 +61,9 @@ type TrackTitlePatches() =
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<LevelSelectController>, "Start")>]
     static member Transpiler(instructions: CodeInstruction seq): CodeInstruction seq =
-        let matcher = CodeMatcher(instructions).MatchForward(true, [|
-            CodeMatch(fun ins -> ins.LoadsConstant())
-            CodeMatch(fun ins -> ins.IsStloc())
+        let matcher = CodeMatcher(instructions).MatchForward(false, [|
+            CodeMatch (fun ins -> ins.LoadsConstant(0L))
+            CodeMatch OpCodes.Stloc_1
         |])
 
         let start = matcher.Pos

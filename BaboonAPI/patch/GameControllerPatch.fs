@@ -83,7 +83,7 @@ type GameControllerPatch() =
 
         let startIndex =
             matcher.Start().MatchForward(false, [|
-                CodeMatch(OpCodes.Ldstr, "/StreamingAssets/trackassets/")
+                CodeMatch(OpCodes.Ldstr, "/trackassets/")
             |]).Pos
 
         let startLabels = matcher.Labels
