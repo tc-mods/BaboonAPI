@@ -32,7 +32,7 @@ type private GameControllerExtension() =
             if instance.freeplay then
                 new FreePlayLoader()
             else
-                let track = TrackAccessor.fetchTrackByIndex instance.levelnum
+                let track = TrackAccessor.fetchTrack GlobalVariables.chosen_track
                 track.LoadTrack()
 
         if not instance.freeplay then
@@ -80,22 +80,6 @@ type GameControllerPatch() =
     [<HarmonyPatch(typeof<GameController>, "Start")>]
     static member TranspileStart(instructions: CodeInstruction seq) : CodeInstruction seq =
         let matcher = CodeMatcher(instructions)
-
-        // Fix title lookups
-        matcher.MatchForward(false, [|
-            CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
-            CodeMatch OpCodes.Ldarg_0
-            CodeMatch OpCodes.Ldfld
-            CodeMatch OpCodes.Ldelem_Ref
-            CodeMatch OpCodes.Ldc_I4_0
-            CodeMatch OpCodes.Ldelem_Ref
-        |]).Repeat(fun matcher ->
-            matcher.RemoveInstruction() // remove ldsfld
-                .Advance(2) // pos = first ldelem_ref
-                .RemoveInstructions(3)
-                .InsertAndAdvance(CodeInstruction.Call(typeof<GameControllerExtension>, "fetchTrackTitle", [| typeof<int> |]))
-                |> ignore
-        ) |> ignore
 
         let startIndex =
             matcher.Start().MatchForward(false, [|

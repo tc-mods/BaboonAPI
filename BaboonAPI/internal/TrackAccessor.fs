@@ -38,6 +38,8 @@ let fetchTrackByIndex (id: int) : TromboneTrack = tracksByIndex.Value[id].track
 
 let fetchTrack (ref: string) = tracks.Value[ref].track
 
+let fetchRegisteredTrack (ref: string) = tracks.Value[ref]
+
 let fetchTrackIndex (ref: string) = tracks.Value[ref].trackIndex
 
 let trackCount () = tracksByIndex.Value.Length
