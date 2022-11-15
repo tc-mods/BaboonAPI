@@ -18,7 +18,7 @@
     <PropertyGroup>
         <PackageId>TromboneChamp.BaboonAPI</PackageId>
         <Title>BaboonAPI</Title>
-        <Version>2.0.0-pre</Version>
+        <Version>2.0.0-pre.2</Version>
         <Authors>offbeatwitch</Authors>
         <Company>TromboneChamps</Company>
         <PackageTags>Trombone Champ</PackageTags>
