@@ -31,6 +31,7 @@ type private TrackrefAccessor() =
     static member trackTitleForIndex i = (TrackAccessor.fetchTrackByIndex i).trackname_long
     static member trackDifficultyForIndex i = (TrackAccessor.fetchTrackByIndex i).difficulty
     static member trackLengthForIndex i = (TrackAccessor.fetchTrackByIndex i).length
+    static member trackCount () = TrackAccessor.trackCount()
 
     static member fetchChosenTrack trackref =
         TrackAccessor.fetchRegisteredTrack trackref |> makeSingleTrackData
@@ -83,4 +84,10 @@ type TrackTitlePatches() =
                 CodeInstruction.Call(typeof<TrackrefAccessor>, "doLevelSelectStart",
                                [| typeof<LevelSelectController>; typeof<List<SingleTrackData>> |])
             |])
+            .MatchForward(false, [|
+                CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
+                CodeMatch OpCodes.Ldlen
+            |])
+            .SetInstructionAndAdvance(CodeInstruction.Call(typeof<TrackrefAccessor>, "trackCount"))
+            .RemoveInstruction() // remove ldlen
             .InstructionEnumeration()
