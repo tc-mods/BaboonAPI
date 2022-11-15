@@ -44,7 +44,7 @@ type private ScoresHelper() =
 
     /// Count S ranks... or alternatively just count played tracks
     /// Only use this for showHatchCanvas!
-    static member CountSRanks () =
+    static member CountSRanks (): int =
         if GlobalVariables.localsettings.acc_unlockhatches then
             GlobalVariables.localsave.tracks_played / 4
         else
@@ -133,14 +133,14 @@ type LevelSelectPatch =
 
     [<HarmonyPrefix>]
     [<HarmonyPatch("checkForS")>]
-    static member CheckForS(trackref: string, __result: bool outref) =
-        __result <- ScoresHelper.CheckForS trackref
+    static member CheckForS(tag: string, __result: bool outref) =
+        __result <- ScoresHelper.CheckForS tag
         false
 
     [<HarmonyPrefix>]
     [<HarmonyPatch("pullLetterScore")>]
-    static member PullLetterScore(trackref: string, __result: string outref) =
-        __result <- ScoresHelper.PullLetterScore trackref
+    static member PullLetterScore(tag: string, __result: string outref) =
+        __result <- ScoresHelper.PullLetterScore tag
         false
 
 [<HarmonyPatch(typeof<LatchController>)>]
@@ -152,9 +152,10 @@ type LatchControllerPatch =
         let endpos = matcher.MatchForward(false, [| CodeMatch(OpCodes.Ldstr, "Player has ") |]).Pos
 
         matcher
-            .Start()
             .RemoveInstructionsInRange(0, endpos - 1)
+            .Start()
             .Insert([|
+                CodeInstruction OpCodes.Ldarg_0
                 CodeInstruction.Call(typeof<ScoresHelper>, "CountSRanks")
                 CodeInstruction.StoreField(typeof<LatchController>, "num_s")
             |])

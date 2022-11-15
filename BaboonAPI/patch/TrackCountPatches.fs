@@ -18,7 +18,6 @@ type TrackCountPatches() =
 
     /// Patches anywhere that reads the trackref length and replaces it with the "true" track count
     [<HarmonyTranspiler>]
-    [<HarmonyPatch(typeof<LevelSelectController>, "Start")>]
     [<HarmonyPatch(typeof<SaveSlotController>, "checkScores")>]
     [<HarmonyPatch(typeof<SaverLoader>, "genBlankScores")>]
     static member PatchLength(instructions: CodeInstruction seq) : CodeInstruction seq =
