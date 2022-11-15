@@ -18,18 +18,16 @@ type private Scores =
 type private CustomScoreStorage() =
     let mutable scores: Map<string, TrackScore> = Map.empty
 
-    interface ScoreLookupRegistry.Listener with
-        member this.AllScores() = scores.Values
-
-        member this.Lookup(trackref) = scores.TryFind trackref
-
+    interface TrackScoreStorage with
+        member this.GetAllScores() = scores.Values
+        member this.Load(trackref) = scores.TryFind trackref
+        member this.Priority = 10
         member this.Save(score) =
-            // Don't save base game tracks
-            if score.isBaseGameTrack then
-                false
-            else
-                scores <- scores.Add (score.trackref, score)
-                true
+            scores <- scores.Add (score.trackref, score)
+            true
+
+        member this.CanStore(trackref) =
+            true
 
     interface ICustomSaveData<Scores> with
         member this.Load(data) =
@@ -44,5 +42,5 @@ type private CustomScoreStorage() =
 module ScoreSaver =
     let setup (info: PluginInfo) =
         let storage = CustomScoreStorage()
-        ScoreLookupRegistry.EVENT.Register storage
+        ScoreLookupRegistry.insert storage
         CustomSaveRegistry.Register info (fun cap -> cap.Attach "scores" storage)

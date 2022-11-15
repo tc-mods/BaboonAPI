@@ -3,7 +3,6 @@
 open System.Reflection.Emit
 open BaboonAPI.Hooks.Scores
 open BaboonAPI.Internal
-open BaboonAPI.Patch
 open HarmonyLib
 open UnityEngine.UI
 
@@ -44,16 +43,18 @@ type private ScoresHelper() =
         | None -> "-"
 
     static member CountSRanks () =
-        ScoreLookupRegistry.EVENT.invoker.AllScores()
+        ScoreLookupRegistry.AllScores()
         |> Seq.filter (fun score -> score.rank |> Option.contains Rank.S)
         |> Seq.length
 
 type private BaseTrackScoreRegistry() =
-    interface ScoreLookupRegistry.Listener with
-        member this.AllScores() =
+    let baseGameSongList = SongData().data_trackrefs
+
+    interface TrackScoreStorage with
+        member this.GetAllScores() =
             (GlobalVariables.localsave.data_trackscores |> ScoresHelper.ImportScores).Values
 
-        member this.Lookup(trackref) =
+        member this.Load trackref =
             GlobalVariables.localsave.data_trackscores
             |> ScoresHelper.ImportScores
             |> Map.tryFind trackref
@@ -70,6 +71,11 @@ type private BaseTrackScoreRegistry() =
             else
                 false
 
+        member this.CanStore(trackref) =
+            baseGameSongList |> Array.contains trackref
+
+        member this.Priority = 0
+
 exception MissingScoreSaverException of string
 
 [<HarmonyPatch(typeof<SaveSlotController>)>]
@@ -84,7 +90,7 @@ type CheckScoresPatch =
             |> Seq.filter(fun t -> ScoreLookupRegistry.lookup t.trackref |> Option.isNone)
 
         let mutable shouldSave = false
-        let save = ScoreLookupRegistry.EVENT.invoker.Save
+        let save = ScoreLookupRegistry.lookupStorage >> Option.map (fun s -> s.Save)
         for track in missing do
             let ts: TrackScore =
                 if track :? BaseGameTrack then
@@ -92,10 +98,11 @@ type CheckScoresPatch =
                 else
                     SimpleTrackScore track.trackref
 
-            if save ts then
+            match ScoreLookupRegistry.lookupStorage ts.trackref with
+            | Some storage ->
+                storage.Save ts |> ignore
                 shouldSave <- true
-            else
-                raise (MissingScoreSaverException track.trackref)
+            | None -> raise (MissingScoreSaverException ts.trackref)
 
         if shouldSave then
             SaverLoader.updateSavedGame()
@@ -170,4 +177,4 @@ type ScoreSaverLoaderPatch =
 
 module ScoreSaverPatch =
     let setup () =
-        ScoreLookupRegistry.EVENT.Register (BaseTrackScoreRegistry())
+        ScoreLookupRegistry.insert (BaseTrackScoreRegistry())

@@ -1,8 +1,8 @@
 ﻿namespace BaboonAPI.Hooks.Scores
 
 open System
-open BaboonAPI.Event
 open Microsoft.FSharp.Core
+
 type Rank =
     | S = 'S'
     | A = 'A'
@@ -77,21 +77,30 @@ type SimpleTrackScore(trackref: string, highscores: int list, highestRank: Rank 
 
     override this.isBaseGameTrack = false
 
+type TrackScoreStorage =
+    abstract Priority: int
+    abstract CanStore: trackref: string -> bool
+    abstract Load: trackref: string -> TrackScore option
+    abstract Save: score: TrackScore -> bool
+    abstract GetAllScores: unit -> TrackScore seq
+
 module ScoreLookupRegistry =
-    type public Listener =
-        abstract Lookup: trackref: string -> TrackScore option
-        abstract Save: score: TrackScore -> bool
-        abstract AllScores: unit -> TrackScore seq
+    let mutable trackScoreStorages: TrackScoreStorage list = []
 
-    let EVENT = EventFactory<Listener>.create(fun listeners ->
-        { new Listener with
-            member _.Lookup trackref =
-                listeners |> Seq.map(fun l -> l.Lookup trackref) |> Seq.tryFind(fun it -> it.IsSome) |> Option.flatten
+    let insert (storage: TrackScoreStorage) =
+        let index = trackScoreStorages |> List.tryFindIndex (fun st -> storage.Priority < st.Priority)
+        trackScoreStorages <- trackScoreStorages |>
+        match index with
+        | Some i ->
+            List.insertAt i storage
+        | None ->
+            List.append [storage]
 
-            member _.Save score =
-                listeners |> Seq.tryFind(fun l -> l.Save score) |> Option.isSome
+    let lookupStorage (trackref: string) =
+        trackScoreStorages |> List.tryFind (fun s -> s.CanStore trackref)
 
-            member _.AllScores () =
-                listeners |> Seq.collect(fun l -> l.AllScores()) })
+    let lookup (trackref: string) =
+        trackScoreStorages |> List.tryPick (fun s -> s.Load trackref)
 
-    let lookup trackref = EVENT.invoker.Lookup trackref
+    let AllScores () =
+        trackScoreStorages |> Seq.collect (fun s -> s.GetAllScores ())
