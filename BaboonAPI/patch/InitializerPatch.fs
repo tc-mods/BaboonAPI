@@ -24,7 +24,7 @@ module private ModInitializer =
         let initResult = GameInitializationEvent.EVENT.invoker.Initialize()
         match initResult with
         | Ok _ ->
-            desc.text <- "All your mods loaded successfully! Happy tooting!"
+            desc.text <- "All your mods loaded successfully!\nHappy tooting!"
             yield WaitForSeconds(2.0f)
 
             LeanTween.rotateZ(bc.epwarningtxt1, 65f, 0.45f).setEaseInQuart() |> ignore
@@ -40,7 +40,7 @@ module private ModInitializer =
 
                 {err.Message}
 
-                The mod is probably just out of date - please update it!
+                The mod is probably just out of date!
                 ({err.PluginInfo.Location})"
             // TODO add quit button
 
