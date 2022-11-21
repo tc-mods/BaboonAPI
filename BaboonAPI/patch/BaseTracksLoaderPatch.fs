@@ -20,6 +20,9 @@ type internal BaseGameLoadedTrack(trackref: string, bundle: AssetBundle) =
         member this.Dispose() =
             bundle.Unload true
 
+        member this.SetUpBackgroundDelayed _ _ =
+            ()
+
         member this.trackref = trackref
 
 type internal BaseGameTrack(data: string[]) =

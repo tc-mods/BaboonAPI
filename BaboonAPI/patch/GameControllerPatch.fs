@@ -18,6 +18,9 @@ type private FreePlayLoader() =
         member this.LoadBackground _ctx =
             bundle.LoadAsset<GameObject> "BGCam_freeplay"
 
+        member this.SetUpBackgroundDelayed _ _ =
+            ()
+
         member this.Dispose() =
             bundle.Unload true
 
@@ -60,6 +63,14 @@ type private GameControllerExtension() =
 
         loadedTrack <- Some l
 
+        ()
+
+    static member DelayedBackgroundSetup (controller: BGController) (bg: GameObject) =
+        match loadedTrack with
+        | Some l ->
+            l.SetUpBackgroundDelayed controller bg
+        | None ->
+            logger.LogWarning "Background setup called with no loaded track"
         ()
 
     static member LoadChart(trackref: string): SavedLevel =
@@ -132,3 +143,10 @@ type GameControllerPatch() =
         ___mySoundAssetBundle <- null
 
         false
+
+    [<HarmonyPostfix>]
+    [<HarmonyPatch(typeof<BGController>, "setUpBGControllerRefsDelayed")>]
+    static member DelayedSetupPostfix(__instance: BGController, ___fullbgobject: GameObject) =
+        GameControllerExtension.DelayedBackgroundSetup __instance ___fullbgobject
+
+        ()

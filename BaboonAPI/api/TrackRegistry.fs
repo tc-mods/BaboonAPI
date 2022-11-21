@@ -35,6 +35,9 @@ type public LoadedTromboneTrack =
     /// Load the background object used for this level
     abstract LoadBackground: ctx: BackgroundContext -> GameObject
 
+    /// Delayed background setup hook; use if you want to modify the background after it's been cloned.
+    abstract SetUpBackgroundDelayed: controller: BGController -> bg: GameObject -> unit
+
 /// Represents a playable track
 type public TromboneTrack =
     abstract trackref: string
