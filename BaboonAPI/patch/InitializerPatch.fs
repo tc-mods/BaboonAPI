@@ -51,6 +51,7 @@ module private ModInitializer =
 type BrandingPatch() =
     static let loadlevel_m = AccessTools.Method(typeof<SaverLoader>, "loadLevelData")
     
+    // Remove SaverLoader.loadLevelData() call, we need to patch it first
     [<HarmonyPatch("Start")>]
     [<HarmonyTranspiler>]
     static member PatchStart (instructions: CodeInstruction seq): CodeInstruction seq =

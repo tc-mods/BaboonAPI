@@ -92,6 +92,7 @@ type GameControllerPatch() =
     static member TranspileStart(instructions: CodeInstruction seq) : CodeInstruction seq =
         let matcher = CodeMatcher(instructions)
 
+        // from `string text = "/trackassets/";`
         let startIndex =
             matcher.Start().MatchForward(false, [|
                 CodeMatch(OpCodes.Ldstr, "/trackassets/")
@@ -99,11 +100,13 @@ type GameControllerPatch() =
 
         let startLabels = matcher.Labels
 
+        // until `gameObject = null`
         let endIndex =
             matcher.MatchForward(true, [|
                 CodeMatch OpCodes.Ldnull
                 CodeMatch OpCodes.Stloc_2
-            |]).Pos
+                CodeMatch OpCodes.Ldc_I4_6
+            |]).Pos - 1 // back up to stloc_2
 
         matcher.RemoveInstructionsInRange(startIndex, endIndex)
             .Start()
