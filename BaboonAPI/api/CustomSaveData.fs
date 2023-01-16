@@ -70,7 +70,7 @@ module CustomSaveRegistry =
     /// <remarks>
     /// Note that the <paramref name="attach" /> callback will be called multiple times,
     /// and thus should not have any side effects.
-    /// This means you should avoid creating new SaverCapability instances inside the callback!
+    /// This means you should avoid creating new ICustomSaveData instances inside the callback!
     /// </remarks>
     /// <param name="info">Plugin info instance, used to namespace save entries.</param>
     /// <param name="attach">Attachment callback, call
@@ -84,7 +84,7 @@ module CustomSaveRegistry =
     /// <remarks>
     /// Note that the <paramref name="attach" /> delegate will be called multiple times,
     /// and thus should not have any side effects.
-    /// This means you should avoid creating new SaverCapability instances inside the delegate!
+    /// This means you should avoid creating new ICustomSaveData instances inside the delegate!
     /// </remarks>
     /// <param name="info">Plugin info instance, used to namespace save entries.</param>
     /// <param name="attach">Attachment callback, call
