@@ -4,6 +4,10 @@ open System
 open BepInEx
 open Newtonsoft.Json.Linq
 
+/// <namespacedoc>
+/// <summary>Custom save data API</summary>
+/// </namespacedoc>
+///
 /// <summary>Implement if you want your class to be able to store persistent data.</summary>
 /// <remarks>
 /// The save &amp; load methods should return and accept a class marked with

@@ -6,7 +6,7 @@ open UnityEngine
 
 /// <namespacedoc>
 /// <summary>
-/// Track registration &amp; loading APIs.
+/// Track registration &amp; loading APIs
 /// </summary>
 /// <remarks>
 /// Provides hooks for registering tracks, plus loading custom charts, audio &amp; backgrounds.

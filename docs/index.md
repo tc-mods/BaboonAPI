@@ -8,5 +8,6 @@ Welcome to the BaboonAPI docs, tromboner!
 
 ## Quick Reference
 
+- `cref:T:BaboonAPI.Hooks.Initializer.GameInitializationEvent`
 - `cref:T:BaboonAPI.Hooks.Tracks.TrackRegistrationEvent`
 - `cref:T:BaboonAPI.Hooks.Saves.CustomSaveRegistry`
