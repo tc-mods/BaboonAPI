@@ -13,10 +13,13 @@ type private FreePlayLoader() =
     interface LoadedTromboneTrack with
         member this.trackref = "freeplay"
         member this.LoadAudio() =
-            null // skip consuming this below.
+            { Clip = null; Volume = 1.0f } // skip consuming this below.
 
-        member this.LoadBackground() =
+        member this.LoadBackground _ctx =
             bundle.LoadAsset<GameObject> "BGCam_freeplay"
+
+        member this.SetUpBackgroundDelayed _ _ =
+            ()
 
         member this.Dispose() =
             bundle.Unload true
@@ -32,16 +35,17 @@ type private GameControllerExtension() =
             if instance.freeplay then
                 new FreePlayLoader()
             else
-                let track = TrackAccessor.fetchTrackByIndex instance.levelnum
+                let track = TrackAccessor.fetchTrack GlobalVariables.chosen_track
                 track.LoadTrack()
 
         if not instance.freeplay then
             let audio = l.LoadAudio()
-            instance.musictrack.clip <- audio.clip
-            instance.musictrack.volume <- audio.volume
+            instance.musictrack.clip <- audio.Clip
+            instance.musictrack.volume <- audio.Volume
 
+        let context = BackgroundContext instance
         let bgObj = Object.Instantiate<GameObject>(
-            l.LoadBackground(), Vector3.zero, Quaternion.identity, instance.bgholder.transform)
+            l.LoadBackground context, Vector3.zero, Quaternion.identity, instance.bgholder.transform)
 
         bgObj.transform.localPosition <- Vector3.zero
         instance.bgcontroller.fullbgobject <- bgObj
@@ -59,6 +63,14 @@ type private GameControllerExtension() =
 
         loadedTrack <- Some l
 
+        ()
+
+    static member DelayedBackgroundSetup (controller: BGController) (bg: GameObject) =
+        match loadedTrack with
+        | Some l ->
+            l.SetUpBackgroundDelayed controller bg
+        | None ->
+            logger.LogWarning "Background setup called with no loaded track"
         ()
 
     static member LoadChart(trackref: string): SavedLevel =
@@ -80,34 +92,21 @@ type GameControllerPatch() =
     static member TranspileStart(instructions: CodeInstruction seq) : CodeInstruction seq =
         let matcher = CodeMatcher(instructions)
 
-        // Fix title lookups
-        matcher.MatchForward(false, [|
-            CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
-            CodeMatch OpCodes.Ldarg_0
-            CodeMatch OpCodes.Ldfld
-            CodeMatch OpCodes.Ldelem_Ref
-            CodeMatch OpCodes.Ldc_I4_0
-            CodeMatch OpCodes.Ldelem_Ref
-        |]).Repeat(fun matcher ->
-            matcher.RemoveInstruction() // remove ldsfld
-                .Advance(2) // pos = first ldelem_ref
-                .RemoveInstructions(3)
-                .InsertAndAdvance(CodeInstruction.Call(typeof<GameControllerExtension>, "fetchTrackTitle", [| typeof<int> |]))
-                |> ignore
-        ) |> ignore
-
+        // from `string text = "/trackassets/";`
         let startIndex =
             matcher.Start().MatchForward(false, [|
-                CodeMatch(OpCodes.Ldstr, "/StreamingAssets/trackassets/")
+                CodeMatch(OpCodes.Ldstr, "/trackassets/")
             |]).Pos
 
         let startLabels = matcher.Labels
 
+        // until `gameObject = null`
         let endIndex =
             matcher.MatchForward(true, [|
                 CodeMatch OpCodes.Ldnull
                 CodeMatch OpCodes.Stloc_2
-            |]).Pos
+                CodeMatch OpCodes.Ldc_I4_6
+            |]).Pos - 1 // back up to stloc_2
 
         matcher.RemoveInstructionsInRange(startIndex, endIndex)
             .Start()
@@ -147,3 +146,10 @@ type GameControllerPatch() =
         ___mySoundAssetBundle <- null
 
         false
+
+    [<HarmonyPostfix>]
+    [<HarmonyPatch(typeof<BGController>, "setUpBGControllerRefsDelayed")>]
+    static member DelayedSetupPostfix(__instance: BGController, ___fullbgobject: GameObject) =
+        GameControllerExtension.DelayedBackgroundSetup __instance ___fullbgobject
+
+        ()

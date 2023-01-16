@@ -1,18 +1,27 @@
-﻿/// <summary>
-/// API for registering new tracks.
-/// </summary>
-/// <remarks>
-/// <code>open BaboonAPI.Hooks
-///
-///member _.Awake () =
-///    Tracks.EVENT.Register MyTrackRegistrationListener()
-/// </code>
-/// </remarks>
-module BaboonAPI.Hooks.Tracks
+﻿namespace BaboonAPI.Hooks.Tracks
 
 open System
 open BaboonAPI.Event
 open UnityEngine
+
+/// <namespacedoc>
+/// <summary>
+/// Track registration &amp; loading APIs
+/// </summary>
+/// <remarks>
+/// Provides hooks for registering tracks, plus loading custom charts, audio &amp; backgrounds.
+/// </remarks>
+/// </namespacedoc>
+///
+/// <summary>Loaded audio clip &amp; volume</summary>
+type public TrackAudio =
+    { Clip: AudioClip
+      Volume: float32 }
+
+/// Context passed to LoadBackground callback
+type public BackgroundContext(controller: GameController) =
+    /// Game controller that is currently attempting to load this background
+    member _.controller = controller
 
 /// Loaded track assets, disposed when a level ends
 type public LoadedTromboneTrack =
@@ -21,10 +30,13 @@ type public LoadedTromboneTrack =
     abstract trackref: string
 
     /// Load the audio clip used for this level
-    abstract LoadAudio: unit -> AudioSource
+    abstract LoadAudio: unit -> TrackAudio
 
     /// Load the background object used for this level
-    abstract LoadBackground: unit -> GameObject
+    abstract LoadBackground: ctx: BackgroundContext -> GameObject
+
+    /// Delayed background setup hook; use if you want to modify the background after it's been cloned.
+    abstract SetUpBackgroundDelayed: controller: BGController -> bg: GameObject -> unit
 
 /// Represents a playable track
 type public TromboneTrack =
@@ -38,7 +50,6 @@ type public TromboneTrack =
     abstract difficulty: int
     abstract tempo: int
     abstract length: int
-    abstract trackindex: int
 
     /// Called during level loading to load the chart data.
     abstract LoadChart: unit -> SavedLevel
@@ -49,24 +60,25 @@ type public TromboneTrack =
     /// Whether this track is visible in the track selector
     abstract IsVisible: unit -> bool
 
-/// Ensures track indexes are sequential
-type public TrackIndexGenerator() =
-    let mutable index = 0
+/// <summary>
+/// Event-based API for registering new tracks.
+/// </summary>
+/// <remarks>
+/// <code>open BaboonAPI.Hooks.Tracks
+///
+///member _.Awake () =
+///    TrackRegistrationEvent.EVENT.Register MyTrackRegistrationListener()
+/// </code>
+/// </remarks>
+module TrackRegistrationEvent =
+    /// Track registration listener
+    type public Listener =
+        /// <summary>Called when registering tracks.</summary>
+        abstract OnRegisterTracks: unit -> TromboneTrack seq
 
-    /// Get the next available track index
-    member _.nextIndex () =
-        index <- index + 1
-        index - 1
-
-/// Track registration callback
-type public Callback =
-    /// <summary>Called when registering tracks.</summary>
-    /// <remarks>You should use the index generator <paramref name="gen" /> for track indexes!</remarks>
-    abstract OnRegisterTracks: gen: TrackIndexGenerator -> TromboneTrack seq
-
-/// Track registration event
-let EVENT =
-    EventFactory.create (fun listeners ->
-        { new Callback with
-            member _.OnRegisterTracks(gen) =
-                listeners |> Seq.collect (fun l -> l.OnRegisterTracks gen) })
+    /// Event bus
+    let EVENT =
+        EventFactory.create (fun listeners ->
+            { new Listener with
+                member _.OnRegisterTracks () =
+                    listeners |> Seq.collect (fun l -> l.OnRegisterTracks()) })

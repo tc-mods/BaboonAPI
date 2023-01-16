@@ -6,6 +6,7 @@ open BaboonAPI.Hooks.Saves
 open BepInEx.Logging
 open HarmonyLib
 open Newtonsoft.Json
+open Newtonsoft.Json.Linq
 open UnityEngine
 
 module private CustomSaveController =
@@ -16,8 +17,8 @@ module private CustomSaveController =
     [<Serializable>]
     [<CLIMutable>]
     type BaboonSaveData =
-        { Version: int
-          PluginData: Map<string, obj> }
+        { [<JsonProperty("Version")>] Version: int
+          [<JsonProperty("PluginData")>] PluginData: Map<string, JObject> }
 
     let private serializer = JsonSerializer.Create()
 

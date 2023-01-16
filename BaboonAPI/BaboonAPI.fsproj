@@ -14,11 +14,16 @@
         <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
+    <!-- fsdocs on netlify -->
+    <PropertyGroup Condition="'$(NETLIFY)' == 'true'">
+        <PackageProjectUrl>$(DEPLOY_PRIME_URL)</PackageProjectUrl>
+    </PropertyGroup>
+
     <!-- nuget settings -->
     <PropertyGroup>
         <PackageId>TromboneChamp.BaboonAPI</PackageId>
         <Title>BaboonAPI</Title>
-        <Version>1.1.1</Version>
+        <Version>2.0.0</Version>
         <Authors>offbeatwitch</Authors>
         <Company>TromboneChamps</Company>
         <PackageTags>Trombone Champ</PackageTags>
@@ -34,8 +39,8 @@
     </PropertyGroup>
 
     <ItemGroup Condition="'$(Configuration)' == 'Release'">
-        <None Include="$(SolutionDir)thunderstore\README.md" Pack="true" PackagePath="\"/>
-        <None Include="$(SolutionDir)thunderstore\icon.png" Pack="true" PackagePath="\"/>
+        <None Include="$(SolutionDir)thunderstore\README.md" Pack="true" PackagePath="\" />
+        <None Include="$(SolutionDir)thunderstore\icon.png" Pack="true" PackagePath="\" />
     </ItemGroup>
     <!-- end nuget config -->
 
@@ -43,19 +48,21 @@
         <Compile Include="events\EventBus.fs" />
         <Compile Include="api\TrackRegistry.fs" />
         <Compile Include="api\CustomSaveData.fs" />
+        <Compile Include="api\Initializer.fs" />
         <Compile Include="internal\TrackAccessor.fs" />
         <Compile Include="patch\TrackCountPatches.fs" />
         <Compile Include="patch\TrackrefPatches.fs" />
         <Compile Include="patch\BaseTracksLoaderPatch.fs" />
         <Compile Include="patch\GameControllerPatch.fs" />
         <Compile Include="patch\SaverLoaderPatch.fs" />
+        <Compile Include="patch\InitializerPatch.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="BepInEx.Core" Version="5.*" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-        <PackageReference Include="TromboneChamp.GameLibs" Version="1.7.0" />
+        <PackageReference Include="TromboneChamp.GameLibs" Version="1.8.9.3" />
     </ItemGroup>
 
     <ItemGroup>
@@ -65,8 +72,8 @@
     <Target Name="ThunderstoreZip" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
         <Delete Files="$(OutDir)thunderstore" />
         <Delete Files="$(OutDir)$(ProjectName)-thunderstore.zip" />
-        <Copy SourceFiles="@(ThunderstoreAssets)" DestinationFolder="$(OutDir)thunderstore"/>
-        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(OutDir)thunderstore/BepInEx/plugins"/>
+        <Copy SourceFiles="@(ThunderstoreAssets)" DestinationFolder="$(OutDir)thunderstore" />
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(OutDir)thunderstore/BepInEx/plugins" />
         <ZipDirectory DestinationFile="$(OutDir)$(ProjectName)-thunderstore.zip" SourceDirectory="$(OutDir)thunderstore" />
     </Target>
 </Project>

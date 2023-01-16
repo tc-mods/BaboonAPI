@@ -7,6 +7,6 @@ Featuring!
 
 * Track registration API
 * Custom save data API
-* ... and more coming soon!
+* Safe initialization API
 
 Docs: https://baboonapi.trombone.wiki

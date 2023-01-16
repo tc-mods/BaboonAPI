@@ -1,7 +1,13 @@
 ﻿namespace BaboonAPI.Hooks.Saves
 
+open System
 open BepInEx
+open Newtonsoft.Json.Linq
 
+/// <namespacedoc>
+/// <summary>Custom save data API</summary>
+/// </namespacedoc>
+///
 /// <summary>Implement if you want your class to be able to store persistent data.</summary>
 /// <remarks>
 /// The save &amp; load methods should return and accept a class marked with
@@ -14,7 +20,13 @@ type ICustomSaveData<'a> =
 
     /// Called when saved data is loaded from disk.
     /// You can use this to restore your class's state.
-    abstract Load: 'a -> unit
+    abstract Load: data: 'a -> unit
+
+    /// <summary>Used to convert the incoming JSON back into your type.</summary>
+    /// <remarks>You should usually implement this function as follows:
+    /// <code>member this.Convert o = o.ToObject()</code>
+    /// </remarks>
+    abstract Convert: o: JObject -> 'a
 
 /// Represents something with the capability to save or load objects.
 type SaverCapability =
@@ -28,7 +40,7 @@ type SaverCapability =
     /// </remarks>
     /// <param name="name">Name to save this object as.</param>
     /// <param name="target">Serializable object</param>
-    abstract Attach: name: string -> target: ICustomSaveData<obj> -> unit
+    abstract Attach: name: string -> target: ICustomSaveData<'a> -> unit
 
 type private PluginSaverLoader(pluginGuid: string, attacher: SaverCapability -> unit) =
     member _.Save (pluginData: Map<string, obj>) =
@@ -40,10 +52,12 @@ type private PluginSaverLoader(pluginGuid: string, attacher: SaverCapability -> 
 
         pluginData
 
-    member _.Load (pluginData: Map<string, obj>) =
+    member _.Load (pluginData: Map<string, JObject>) =
         attacher { new SaverCapability with
                      member _.Attach name sd =
-                         pluginData[$"{pluginGuid}/{name}"] |> sd.Load }
+                         match pluginData |> Map.tryFind $"{pluginGuid}/{name}" with
+                         | Some entry -> entry |> sd.Convert |> sd.Load
+                         | None -> () }
 
 /// <summary>Persistent data API</summary>
 /// <remarks>
@@ -56,6 +70,7 @@ module CustomSaveRegistry =
     /// <remarks>
     /// Note that the <paramref name="attach" /> callback will be called multiple times,
     /// and thus should not have any side effects.
+    /// This means you should avoid creating new ICustomSaveData instances inside the callback!
     /// </remarks>
     /// <param name="info">Plugin info instance, used to namespace save entries.</param>
     /// <param name="attach">Attachment callback, call
@@ -65,9 +80,31 @@ module CustomSaveRegistry =
         pluginSavers <- PluginSaverLoader (info.Metadata.GUID, attach) :: pluginSavers
         ()
 
-    let internal SaveAll () =
-        pluginSavers |> Seq.fold (fun state saver -> saver.Save state) Map.empty
+    /// <summary>Register the saveable objects for your plugin.</summary>
+    /// <remarks>
+    /// Note that the <paramref name="attach" /> delegate will be called multiple times,
+    /// and thus should not have any side effects.
+    /// This means you should avoid creating new ICustomSaveData instances inside the delegate!
+    /// </remarks>
+    /// <param name="info">Plugin info instance, used to namespace save entries.</param>
+    /// <param name="attach">Attachment callback, call
+    /// <see cref="M:BaboonAPI.Hooks.Saves.SaverCapability.Attach(System.String,BaboonAPI.Hooks.Saves.ICustomSaveData{System.Object})">
+    /// Attach</see> to attach saveable objects.</param>
+    let RegisterDelegate (info: PluginInfo, attach: Action<SaverCapability>) =
+        Register info (FuncConvert.FromAction attach)
 
-    let internal LoadAll (pluginData: Map<string, obj>) =
+    /// <summary>Helper function to easily add saveable objects.</summary>
+    /// <remarks>Simpler method to attach saveables without worrying about side effects.</remarks>
+    /// <param name="info">Plugin info instance, used to namespace save entries.</param>
+    /// <param name="savers">Map of data keys to saveables</param>
+    let Attach (info: PluginInfo) (savers: Map<string, ICustomSaveData<'a>>) =
+        Register info (fun cap -> savers |> Map.iter cap.Attach)
+
+    let internal SaveAll () =
+        pluginSavers
+        |> Seq.fold (fun state saver -> saver.Save state) Map.empty
+        |> Map.map (fun _ -> JObject.FromObject)
+
+    let internal LoadAll (pluginData: Map<string, JObject>) =
         for saver in pluginSavers do
             saver.Load pluginData
