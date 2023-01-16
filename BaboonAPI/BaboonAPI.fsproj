@@ -15,7 +15,7 @@
     </PropertyGroup>
 
     <!-- fsdocs on netlify -->
-    <PropertyGroup Condition="'$(NETLIFY)' == 'true'">
+    <PropertyGroup Condition="'$(NETLIFY)' == 'true' And '$(CONTEXT)' != 'production'">
         <PackageProjectUrl>$(DEPLOY_PRIME_URL)</PackageProjectUrl>
     </PropertyGroup>
 
