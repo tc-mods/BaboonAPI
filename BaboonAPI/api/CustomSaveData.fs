@@ -50,7 +50,9 @@ type private PluginSaverLoader(pluginGuid: string, attacher: SaverCapability -> 
     member _.Load (pluginData: Map<string, JObject>) =
         attacher { new SaverCapability with
                      member _.Attach name sd =
-                         pluginData[$"{pluginGuid}/{name}"] |> sd.Convert |> sd.Load }
+                         match pluginData |> Map.tryFind $"{pluginGuid}/{name}" with
+                         | Some entry -> entry |> sd.Convert |> sd.Load
+                         | None -> () }
 
 /// <summary>Persistent data API</summary>
 /// <remarks>
