@@ -4,6 +4,7 @@ Welcome to the BaboonAPI docs, tromboner!
 
 ## Guides
 
+- [Safe Initialization](initializer-guide.md)
 - [Track Registration](tracks-guide.md)
 
 ## Quick Reference
