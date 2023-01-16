@@ -1,5 +1,6 @@
 ﻿namespace BaboonAPI.Hooks.Saves
 
+open System
 open BepInEx
 open Newtonsoft.Json.Linq
 
@@ -65,6 +66,7 @@ module CustomSaveRegistry =
     /// <remarks>
     /// Note that the <paramref name="attach" /> callback will be called multiple times,
     /// and thus should not have any side effects.
+    /// This means you should avoid creating new SaverCapability instances inside the callback!
     /// </remarks>
     /// <param name="info">Plugin info instance, used to namespace save entries.</param>
     /// <param name="attach">Attachment callback, call
@@ -73,6 +75,26 @@ module CustomSaveRegistry =
     let Register (info: PluginInfo) (attach: SaverCapability -> unit) =
         pluginSavers <- PluginSaverLoader (info.Metadata.GUID, attach) :: pluginSavers
         ()
+
+    /// <summary>Register the saveable objects for your plugin.</summary>
+    /// <remarks>
+    /// Note that the <paramref name="attach" /> delegate will be called multiple times,
+    /// and thus should not have any side effects.
+    /// This means you should avoid creating new SaverCapability instances inside the delegate!
+    /// </remarks>
+    /// <param name="info">Plugin info instance, used to namespace save entries.</param>
+    /// <param name="attach">Attachment callback, call
+    /// <see cref="M:BaboonAPI.Hooks.Saves.SaverCapability.Attach(System.String,BaboonAPI.Hooks.Saves.ICustomSaveData{System.Object})">
+    /// Attach</see> to attach saveable objects.</param>
+    let RegisterDelegate (info: PluginInfo, attach: Action<SaverCapability>) =
+        Register info (FuncConvert.FromAction attach)
+
+    /// <summary>Helper function to easily add saveable objects.</summary>
+    /// <remarks>Simpler method to attach saveables without worrying about side effects.</remarks>
+    /// <param name="info">Plugin info instance, used to namespace save entries.</param>
+    /// <param name="savers">Map of data keys to saveables</param>
+    let Attach (info: PluginInfo) (savers: Map<string, ICustomSaveData<'a>>) =
+        Register info (fun cap -> savers |> Map.iter cap.Attach)
 
     let internal SaveAll () =
         pluginSavers
