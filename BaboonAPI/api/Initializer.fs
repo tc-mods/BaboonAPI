@@ -1,5 +1,6 @@
 ﻿namespace BaboonAPI.Hooks.Initializer
 
+open System
 open BaboonAPI.Event
 open BepInEx
 open UnityEngine
@@ -71,3 +72,17 @@ module GameInitializationEvent =
                 listeners
                 |> Seq.map (fun l -> l.Initialize())
                 |> ResultExt.runUntilErr })
+    
+    /// <summary>Helper function to quickly register a fallible initialization callback from C#</summary>
+    /// <remarks>
+    /// This function lets you easily set up an initialization callback in C# without having to convert to F# functions
+    /// manually.
+    /// 
+    /// An exception thrown in here will safely stop the game loading, and the error will be displayed to the user.
+    /// </remarks>
+    /// <param name="info">Metadata used when displaying errors</param>
+    /// <param name="applier">Wrapped function</param>
+    let public Register (info: PluginInfo) (applier: Action) =
+        EVENT.Register { new Listener with
+                           override _.Initialize() =
+                               attempt info (FuncConvert.FromAction applier) }
