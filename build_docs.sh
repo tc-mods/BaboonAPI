@@ -9,4 +9,4 @@ dotnet tool install --global fsdocs-tool --version 16.1.1
 dotnet build
 
 # Build docs
-fsdocs build --parameters root / fsdocs-logo-link $DEPLOY_PRIME_URL fsdocs-collection-name-link $DEPLOY_PRIME_URL
+fsdocs build --parameters root /
