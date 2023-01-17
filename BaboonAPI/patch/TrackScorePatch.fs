@@ -1,5 +1,6 @@
 ﻿namespace BaboonAPI.Patch
 
+open System.Collections.Generic
 open System.Reflection.Emit
 open BaboonAPI.Internal.ScoreStorage
 open HarmonyLib
@@ -45,20 +46,21 @@ type TrackScorePatches() =
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<LevelSelectController>, "populateScores")>]
-    static member PopulateScores(do_full_anim: bool, ___songindex: int, ___alltrackslist: SingleTrackData list, ___topscores: Text array) =
+    static member PopulateScores(do_full_anim: bool, ___songindex: int, ___alltrackslist: SingleTrackData List, ___topscores: Text array) =
         if do_full_anim then
             let trackref = ___alltrackslist[___songindex].trackref
             let scores = TrackScoresUtility.get trackref
+            let hiscores = List.toArray scores.highScores
 
-            for i, score in Seq.indexed scores.highScores do
-                let txt = ___topscores[i]
-                txt.transform.localScale <- Vector3(0.001f, 1f, 1f)
+            for i, txt in Seq.indexed ___topscores do
+                txt.transform.localScale <- Vector3(0.001f, 0.5f, 1f);
                 LeanTween.cancel txt.gameObject
-                LeanTween.scaleX(txt.gameObject, 1f, 0.06f)
+                LeanTween.scaleX(txt.gameObject, 0.5f, 0.06f)
                     .setDelay(0.03f * float32 i)
                     .setEaseOutQuart()
                     |> ignore
 
+                let score = hiscores[i]
                 txt.text <-
                     if score > 0 then
                         score.ToString("n0")
@@ -96,20 +98,20 @@ type TrackScorePatches() =
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<LatchController>, "showHatchCanvas")>]
     static member PatchHatchCanvas(instructions: CodeInstruction seq) : CodeInstruction seq =
-        let matcher =
-            CodeMatcher(instructions).MatchForward(true, [|
+        let matcher = CodeMatcher(instructions)
+
+        let startIndex =
+            matcher.MatchForward(true, [|
                 CodeMatch (fun ins -> ins.LoadsConstant(0L))
                 CodeMatch OpCodes.Stloc_0
-                CodeMatch (fun ins -> ins.opcode = OpCodes.Br)
-            |]).ThrowIfInvalid("Could not find start of for loop in LatchController#showHatchCanvas")
-
-        let startIndex = matcher.Pos
+                CodeMatch OpCodes.Br
+            |]).ThrowIfInvalid("Could not find start of for loop in LatchController#showHatchCanvas").Pos
 
         let endIndex =
             matcher.MatchForward(true, [|
                 CodeMatch OpCodes.Ldlen
                 CodeMatch OpCodes.Conv_I4
-                CodeMatch OpCodes.Blt_S
+                CodeMatch OpCodes.Blt
             |]).ThrowIfInvalid("Could not find end of for loop in LatchController#showHatchCanvas").Pos
 
         matcher

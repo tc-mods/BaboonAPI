@@ -3,6 +3,7 @@
 open System
 open BaboonAPI.Hooks.Saves
 open BepInEx.Logging
+open Newtonsoft.Json
 
 let log = Logger.CreateLogSource "BaboonAPI.ScoreStorage"
 
@@ -66,7 +67,7 @@ type TrackScores =
         { this with highestRank = highestRank
                     highScores = highScores }
 
-let emptyScore = { trackref = ""; highestRank = None; highScores = [] }
+let emptyScore = { trackref = ""; highestRank = None; highScores = [0; 0; 0; 0; 0] }
 
 type IScoreStorage =
     abstract Save : score: AchievedScore -> unit
@@ -74,9 +75,10 @@ type IScoreStorage =
     abstract Load : trackref: string -> TrackScores
 
 [<Serializable>]
+[<CLIMutable>]
 type SavedScore =
-    { Rank: string
-      HighScores: int list }
+    { [<JsonProperty("rank")>] Rank: string
+      [<JsonProperty("highScores")>] HighScores: int list }
 
 type CustomTrackScoreStorage() =
     let mutable scores : Map<string, TrackScores> = Map.empty
