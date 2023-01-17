@@ -20,7 +20,7 @@ type BaboonPlugin() =
 
     interface GameInitializationEvent.Listener with
         member this.Initialize() =
-            this.Logger.LogInfo "Hello from BaboonAPI!"
+            this.Logger.LogInfo "Unlocking the secrets of the baboon..."
 
             // Apply the rest of the patches
             GameInitializationEvent.attempt this.Info (fun () ->
