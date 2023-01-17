@@ -50,12 +50,14 @@
         <Compile Include="api\CustomSaveData.fs" />
         <Compile Include="api\Initializer.fs" />
         <Compile Include="internal\TrackAccessor.fs" />
+        <Compile Include="internal\ScoreStorage.fs" />
         <Compile Include="patch\TrackCountPatches.fs" />
         <Compile Include="patch\TrackrefPatches.fs" />
         <Compile Include="patch\BaseTracksLoaderPatch.fs" />
         <Compile Include="patch\GameControllerPatch.fs" />
         <Compile Include="patch\SaverLoaderPatch.fs" />
         <Compile Include="patch\InitializerPatch.fs" />
+        <Compile Include="patch\TrackScorePatch.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>
 

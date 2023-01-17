@@ -3,6 +3,7 @@
 open System.IO
 open System.Runtime.Serialization.Formatters.Binary
 open BaboonAPI.Hooks.Tracks
+open BaboonAPI.Internal
 open BepInEx.Logging
 open HarmonyLib
 open UnityEngine
@@ -56,6 +57,12 @@ type internal BaseGameTrack(data: string[]) =
             BinaryFormatter().Deserialize(stream) :?> SavedLevel
 
 type internal BaseGameTrackRegistry(songs: SongData) =
+    /// List of base game trackrefs
+    member _.trackrefs =
+        songs.data_tracktitles
+        |> Seq.map (fun data -> data[2])
+        |> Seq.toList
+
     interface TrackRegistrationEvent.Listener with
         override this.OnRegisterTracks () = seq {
             for array in songs.data_tracktitles do
@@ -71,8 +78,10 @@ type LoaderPatch() =
         if File.Exists path then
             use stream = File.Open (path, FileMode.Open)
             let data = BinaryFormatter().Deserialize(stream) :?> SongData
+            let registry = BaseGameTrackRegistry data
 
-            TrackRegistrationEvent.EVENT.Register (BaseGameTrackRegistry data)
+            TrackRegistrationEvent.EVENT.Register registry
+            ScoreStorage.initialize registry.trackrefs
         else
             logger.LogWarning "Could not find base game songdata.tchamp"
 

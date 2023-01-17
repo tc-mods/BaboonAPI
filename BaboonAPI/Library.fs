@@ -1,6 +1,7 @@
 ﻿namespace BaboonAPI
 
 open BaboonAPI.Hooks.Initializer
+open BaboonAPI.Hooks.Saves
 open BaboonAPI.Internal
 open BaboonAPI.Patch
 open BepInEx
@@ -14,6 +15,8 @@ type BaboonPlugin() =
 
     member this.Awake() =
         GameInitializationEvent.EVENT.Register this
+        CustomSaveRegistry.Register this.Info (fun cap ->
+            cap.Attach "scores" ScoreStorage.customStorage)
 
         // Apply the initializer patchset
         harmony.PatchAll(typeof<BrandingPatch>)
