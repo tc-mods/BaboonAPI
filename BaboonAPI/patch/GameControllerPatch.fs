@@ -94,19 +94,26 @@ type GameControllerPatch() =
 
         // from `string text = "/trackassets/";`
         let startIndex =
-            matcher.Start().MatchForward(false, [|
-                CodeMatch(OpCodes.Ldstr, "/trackassets/")
-            |]).Pos
+            matcher
+                .Start()
+                .MatchForward(false, [|
+                    CodeMatch(OpCodes.Ldstr, "/trackassets/")
+                |])
+                .ThrowIfInvalid("Could not find start of injection point in GameController#Start")
+                .Pos
 
         let startLabels = matcher.Labels
 
         // until `gameObject = null`
         let endIndex =
-            matcher.MatchForward(true, [|
-                CodeMatch OpCodes.Ldnull
-                CodeMatch OpCodes.Stloc_2
-                CodeMatch OpCodes.Ldc_I4_6
-            |]).Pos - 1 // back up to stloc_2
+            matcher
+                .MatchForward(true, [|
+                    CodeMatch OpCodes.Ldnull
+                    CodeMatch OpCodes.Stloc_2
+                    CodeMatch OpCodes.Ldc_I4_6
+                |])
+                .ThrowIfInvalid("Could not find end of injection point in GameController#Start")
+                .Pos - 1 // back up to stloc_2
 
         matcher.RemoveInstructionsInRange(startIndex, endIndex)
             .Start()
@@ -121,11 +128,13 @@ type GameControllerPatch() =
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<GameController>, "tryToLoadLevel")>]
     static member LoadChartTranspiler(instructions: CodeInstruction seq): CodeInstruction seq =
-        let matcher = CodeMatcher(instructions)
-        matcher.MatchForward(true, [|
-            CodeMatch OpCodes.Ldnull
-            CodeMatch OpCodes.Stloc_1
-        |]) |> ignore
+        let matcher =
+            CodeMatcher(instructions)
+                .MatchForward(true, [|
+                    CodeMatch OpCodes.Ldnull
+                    CodeMatch OpCodes.Stloc_1
+                |])
+                .ThrowIfInvalid("Could not find injection point in GameController#tryToLoadLevel")
 
         let endpos = matcher.Pos
         matcher.RemoveInstructionsInRange(0, endpos)

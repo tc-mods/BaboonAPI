@@ -25,7 +25,9 @@ type TrackCountPatches() =
             .MatchForward(false, [|
                 CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
                 CodeMatch(OpCodes.Ldlen)
-            |]).Repeat(fun matcher ->
+            |])
+            .ThrowIfInvalid("Could not find data_tracktitles length lookup")
+            .Repeat(fun matcher ->
                 matcher.RemoveInstructions(2)
                     .Insert(CodeInstruction.Call(typeof<TrackCountAccessor>, "trackCount"))
                     |> ignore
@@ -42,7 +44,7 @@ type TrackCountPatches() =
                 CodeMatch(OpCodes.Ldelem_Ref)
                 CodeMatch(fun ins -> ins.LoadsConstant())
                 CodeMatch(OpCodes.Ldelem_Ref)
-            |])
+            |]).ThrowIfInvalid("Could not find data_tracktitles lookup")
 
         matcher.Repeat(fun matcher ->
             let lf_labels = matcher.Labels // get labels of LoadsField

@@ -62,10 +62,13 @@ type TrackTitlePatches() =
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<LevelSelectController>, "Start")>]
     static member Transpiler(instructions: CodeInstruction seq): CodeInstruction seq =
-        let matcher = CodeMatcher(instructions).MatchForward(false, [|
-            CodeMatch (fun ins -> ins.LoadsConstant(0L))
-            CodeMatch OpCodes.Stloc_1
-        |])
+        let matcher =
+            CodeMatcher(instructions)
+                .MatchForward(false, [|
+                    CodeMatch (fun ins -> ins.LoadsConstant(0L))
+                    CodeMatch OpCodes.Stloc_1
+                |])
+                .ThrowIfInvalid("Could not find start of injection point in LevelSelectController#Start")
 
         let start = matcher.Pos
 
@@ -74,6 +77,7 @@ type TrackTitlePatches() =
                 CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
                 CodeMatch OpCodes.Ldlen
             |])
+            .ThrowIfInvalid("Could not find end of injection point in LevelSelectController#Start")
             .RemoveInstructionsInRange(start, matcher.Pos + 2) // Remove the for loop
             .Start()
             .Advance(start) // Go to where the for loop used to be
@@ -88,6 +92,7 @@ type TrackTitlePatches() =
                 CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
                 CodeMatch OpCodes.Ldlen
             |])
+            .ThrowIfInvalid("Could not find data_tracktitles length lookup in LevelSelectController#Start")
             .SetInstructionAndAdvance(CodeInstruction.Call(typeof<TrackrefAccessor>, "trackCount"))
             .RemoveInstruction() // remove ldlen
             .InstructionEnumeration()
