@@ -98,9 +98,9 @@ type TrackScorePatches() =
     static member PatchHatchCanvas(instructions: CodeInstruction seq) : CodeInstruction seq =
         let matcher =
             CodeMatcher(instructions).MatchForward(true, [|
-                CodeMatch OpCodes.Ldc_I4_0
+                CodeMatch (fun ins -> ins.LoadsConstant(0L))
                 CodeMatch OpCodes.Stloc_0
-                CodeMatch OpCodes.Br_S
+                CodeMatch (fun ins -> ins.opcode = OpCodes.Br)
             |]).ThrowIfInvalid("Could not find start of for loop in LatchController#showHatchCanvas")
 
         let startIndex = matcher.Pos

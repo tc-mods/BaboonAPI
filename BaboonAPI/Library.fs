@@ -34,6 +34,7 @@ type BaboonPlugin() =
                     typeof<LoaderPatch>
                     typeof<GameControllerPatch>
                     typeof<SaverLoaderPatch>
+                    typeof<TrackScorePatches>
                 ] |> List.iter harmony.PatchAll
 
                 // We've patched it now so we can call it.
