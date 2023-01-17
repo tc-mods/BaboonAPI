@@ -45,3 +45,6 @@ let fetchTrackIndex (ref: string) = tracks.Value[ref].trackIndex
 let trackCount () = tracksByIndex.Value.Length
 
 let allTracks () = tracksByIndex.Value |> Seq.ofList
+
+let load () =
+    tracks.Value |> ignore
