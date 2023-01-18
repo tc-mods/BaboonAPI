@@ -1,6 +1,5 @@
 ﻿namespace BaboonAPI.Patch
 
-open System
 open System.Reflection.Emit
 open BaboonAPI.Internal.ScoreStorage
 open HarmonyLib
@@ -28,7 +27,7 @@ type private TrackScoresAccessor() =
         |> Seq.filter (fun r -> r >= Rank.S)
         |> Seq.length
 
-    static member fetchHighScores (trackref: string) =
+    static member fetchHighScoresFormatted (trackref: string) =
         (TrackScoresUtility.get trackref).highScores
         |> List.map (fun i ->
             if i > 0 then
@@ -36,6 +35,9 @@ type private TrackScoresAccessor() =
             else
                 "-")
         |> ResizeArray
+    
+    static member fetchHighestScore (trackref: string) =
+        (TrackScoresUtility.get trackref).highScores.Head
 
 [<HarmonyPatch>]
 type TrackScorePatches() =
@@ -99,19 +101,19 @@ type TrackScorePatches() =
             .Start()
             .Advance(startIndex)
             .InsertAndAdvance([|
+                CodeInstruction OpCodes.Ldarg_0 // wait for it...
                 CodeInstruction OpCodes.Ldarg_0
                 CodeInstruction.LoadField(typeof<LevelSelectController>, "alltrackslist")
                 CodeInstruction OpCodes.Ldarg_0
                 CodeInstruction.LoadField(typeof<LevelSelectController>, "songindex")
                 CodeInstruction.Call(typeof<ResizeArray<SingleTrackData>>, "get_Item", [| typeof<int32> |])
+                    |> (fun ins -> ins.opcode <- OpCodes.Callvirt; ins)
                 CodeInstruction.LoadField(typeof<SingleTrackData>, "trackref")
-                CodeInstruction.Call(typeof<TrackScoresAccessor>, "fetchHighScores")
                 CodeInstruction OpCodes.Dup
+                CodeInstruction.Call(typeof<TrackScoresAccessor>, "fetchHighScoresFormatted")
                 CodeInstruction OpCodes.Stloc_1
-                CodeInstruction OpCodes.Ldc_I4_0
-                CodeInstruction.Call(typeof<ResizeArray<string>>, "get_Item", [| typeof<int32> |])
-                CodeInstruction.Call(typeof<Int32>, "Parse", [| typeof<string> |])
-                CodeInstruction.StoreField(typeof<LevelSelectController>, "highestscore")
+                CodeInstruction.Call(typeof<TrackScoresAccessor>, "fetchHighestScore")
+                CodeInstruction.StoreField(typeof<LevelSelectController>, "highestscore") // ... there it is!
             |])
             .InstructionEnumeration()
 
