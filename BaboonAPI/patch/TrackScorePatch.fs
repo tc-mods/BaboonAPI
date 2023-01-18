@@ -1,11 +1,9 @@
 ﻿namespace BaboonAPI.Patch
 
-open System.Collections.Generic
+open System
 open System.Reflection.Emit
 open BaboonAPI.Internal.ScoreStorage
 open HarmonyLib
-open UnityEngine
-open UnityEngine.UI
 
 module private TrackScoresUtility =
     let get (trackref: string) = (getStorageFor trackref).Load trackref
@@ -30,6 +28,15 @@ type private TrackScoresAccessor() =
         |> Seq.filter (fun r -> r >= Rank.S)
         |> Seq.length
 
+    static member fetchHighScores (trackref: string) =
+        (TrackScoresUtility.get trackref).highScores
+        |> List.map (fun i ->
+            if i > 0 then
+                i.ToString("n0")
+            else
+                "-")
+        |> ResizeArray
+
 [<HarmonyPatch>]
 type TrackScorePatches() =
     [<HarmonyPrefix>]
@@ -43,33 +50,6 @@ type TrackScorePatches() =
     static member PullLetterScore(tag: string, __result: string outref) =
         __result <- TrackScoresUtility.pullLetterScore tag
         false
-
-    [<HarmonyPrefix>]
-    [<HarmonyPatch(typeof<LevelSelectController>, "populateScores")>]
-    static member PopulateScores(do_full_anim: bool, ___songindex: int, ___alltrackslist: SingleTrackData List, ___topscores: Text array) =
-        if do_full_anim then
-            let trackref = ___alltrackslist[___songindex].trackref
-            let scores = TrackScoresUtility.get trackref
-            let hiscores = List.toArray scores.highScores
-
-            for i, txt in Seq.indexed ___topscores do
-                txt.transform.localScale <- Vector3(0.001f, 0.5f, 1f);
-                LeanTween.cancel txt.gameObject
-                LeanTween.scaleX(txt.gameObject, 0.5f, 0.06f)
-                    .setDelay(0.03f * float32 i)
-                    .setEaseOutQuart()
-                    |> ignore
-
-                let score = hiscores[i]
-                txt.text <-
-                    if score > 0 then
-                        score.ToString("n0")
-                    else
-                        "-"
-
-            false
-        else
-            true // let the original method handle this one
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<SaveSlotController>, "checkScores")>]
@@ -94,6 +74,46 @@ type TrackScorePatches() =
         TrackScoresUtility.put songtag score
 
         false
+
+    [<HarmonyTranspiler>]
+    [<HarmonyPatch(typeof<LevelSelectController>, "populateScores")>]
+    static member PatchPopulateScores(instructions: CodeInstruction seq): CodeInstruction seq =
+        let matcher = CodeMatcher(instructions)
+
+        let startIndex =
+            matcher.MatchForward(false, [|
+                CodeMatch (fun ins -> ins.LoadsConstant 0L)
+                CodeMatch OpCodes.Stloc_2
+                CodeMatch OpCodes.Br
+            |]).ThrowIfInvalid("Could not find start of for loop in LevelSelectController#populateScores").Pos
+
+        let endIndex =
+            matcher.MatchForward(true, [|
+                CodeMatch OpCodes.Ldloc_3
+                CodeMatch (fun ins -> ins.LoadsConstant 7L)
+                CodeMatch OpCodes.Blt
+            |]).ThrowIfInvalid("Could not find end of 2nd for loop in LevelSelectController#populateScores").Pos
+
+        matcher
+            .RemoveInstructionsInRange(startIndex, endIndex)
+            .Start()
+            .Advance(startIndex)
+            .InsertAndAdvance([|
+                CodeInstruction OpCodes.Ldarg_0
+                CodeInstruction.LoadField(typeof<LevelSelectController>, "alltrackslist")
+                CodeInstruction OpCodes.Ldarg_0
+                CodeInstruction.LoadField(typeof<LevelSelectController>, "songindex")
+                CodeInstruction.Call(typeof<ResizeArray<SingleTrackData>>, "get_Item", [| typeof<int32> |])
+                CodeInstruction.LoadField(typeof<SingleTrackData>, "trackref")
+                CodeInstruction.Call(typeof<TrackScoresAccessor>, "fetchHighScores")
+                CodeInstruction OpCodes.Dup
+                CodeInstruction OpCodes.Stloc_1
+                CodeInstruction OpCodes.Ldc_I4_0
+                CodeInstruction.Call(typeof<ResizeArray<string>>, "get_Item", [| typeof<int32> |])
+                CodeInstruction.Call(typeof<Int32>, "Parse", [| typeof<string> |])
+                CodeInstruction.StoreField(typeof<LevelSelectController>, "highestscore")
+            |])
+            .InstructionEnumeration()
 
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<LatchController>, "showHatchCanvas")>]
