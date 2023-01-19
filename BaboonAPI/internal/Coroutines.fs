@@ -1,5 +1,6 @@
 ﻿module BaboonAPI.Internal.Coroutines
 
+open System
 open UnityEngine
 
 type IYieldWithResult<'r> =
@@ -31,9 +32,17 @@ type CoroutineBuilder() =
             yield! binder(src.Result) // then call the binder with the result
         }
 
+    member _.Using<'a when 'a :> IDisposable> (expr: 'a, binder: 'a -> YieldInstruction seq) =
+        seq {
+            try
+                yield! binder(expr)
+            finally
+                expr.Dispose()
+        }
+
     member _.Combine (a: YieldInstruction seq, b: YieldInstruction seq) = Seq.append a b
 
-    member _.Delay (binder: unit -> YieldInstruction seq) = binder()
+    member _.Delay (binder: unit -> YieldInstruction seq) = Seq.delay binder
 
     member _.Zero () : YieldInstruction seq = Seq.empty
 
