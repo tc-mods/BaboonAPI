@@ -2,12 +2,13 @@
 
 open System.Reflection.Emit
 open BaboonAPI.Hooks.Initializer
+open BaboonAPI.Internal.Coroutines
 open HarmonyLib
 open UnityEngine
 open UnityEngine.UI
 
 module private ModInitializer =
-    let Initialize (bc: BrandingController) = seq {
+    let Initialize (bc: BrandingController) = coroutine {
         yield WaitForSeconds(6.5f)
 
         let title = bc.epwarningtxt1.GetComponent<Text>()
@@ -50,7 +51,7 @@ module private ModInitializer =
 [<HarmonyPatch(typeof<BrandingController>)>]
 type BrandingPatch() =
     static let loadlevel_m = AccessTools.Method(typeof<SaverLoader>, "loadLevelData")
-    
+
     // Remove SaverLoader.loadLevelData() call, we need to patch it first
     [<HarmonyPatch("Start")>]
     [<HarmonyTranspiler>]
@@ -78,7 +79,7 @@ type BrandingPatch() =
     [<HarmonyPatch("epwarning")>]
     [<HarmonyPostfix>]
     static member WarningPostfix (__instance: BrandingController) =
-        ModInitializer.Initialize(__instance).GetEnumerator()
+        ModInitializer.Initialize __instance
         |> __instance.StartCoroutine
         |> ignore
         ()
