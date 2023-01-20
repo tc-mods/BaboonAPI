@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BaboonAPI", "BaboonAPI\BaboonAPI.fsproj", "{5892EEFB-AFC4-42F3-87F8-AE3E1D247C45}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "BaboonAPI.UI", "BaboonAPI.UI\BaboonAPI.UI.fsproj", "{BCE10130-9459-4576-B381-74165FA97505}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{5892EEFB-AFC4-42F3-87F8-AE3E1D247C45}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5892EEFB-AFC4-42F3-87F8-AE3E1D247C45}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5892EEFB-AFC4-42F3-87F8-AE3E1D247C45}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCE10130-9459-4576-B381-74165FA97505}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCE10130-9459-4576-B381-74165FA97505}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCE10130-9459-4576-B381-74165FA97505}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCE10130-9459-4576-B381-74165FA97505}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

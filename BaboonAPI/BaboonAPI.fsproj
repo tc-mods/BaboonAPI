@@ -45,6 +45,8 @@
     <!-- end nuget config -->
 
     <ItemGroup>
+        <Content Include="LoadingScreen.xml" />
+        
         <Compile Include="events\EventBus.fs" />
         <Compile Include="utility\Coroutines.fs" />
         <Compile Include="utility\UnityUtilities.fs" />

@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Layout xmlns="http://baboonapi.trombone.wiki/ui/schema">
+    <VerticalGroup padding="10">
+        <Text align="center" content="Loading..." font-size="16" />
+    </VerticalGroup>
+</Layout>

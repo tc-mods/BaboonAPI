@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net472</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="ast\Elements.fs" />
+        <Compile Include="ast\Builder.fs" />
+        <Compile Include="Library.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BepInEx.Core" Version="5.*" />
+        <PackageReference Include="TromboneChamp.GameLibs" Version="1.9.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="Schema.xsd" />
+    </ItemGroup>
+</Project>

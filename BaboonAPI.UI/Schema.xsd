@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    elementFormDefault="qualified"
+    targetNamespace="http://baboonapi.trombone.wiki/ui/schema">
+
+    <xs:element name="Layout">
+        <xs:annotation>
+            <xs:documentation>Root Layout element</xs:documentation>
+        </xs:annotation>
+        <xs:complexType>
+            <xs:sequence>
+                <xs:group ref="AllElements" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="LayoutGroup">
+        <xs:sequence>
+            <xs:group ref="AllElements" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="padding" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="Graphics">
+        <xs:attribute name="color" type="xs:string" />
+    </xs:complexType>
+    <xs:complexType name="Text">
+        <xs:complexContent>
+            <xs:extension base="Graphics">
+                <xs:attribute name="align" type="xs:string" />
+                <xs:attribute name="content" type="xs:string" />
+                <xs:attribute name="font-size" type="xs:positiveInteger" />
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:group name="AllElements">
+        <xs:choice>
+            <xs:element name="HorizontalGroup" type="LayoutGroup" />
+            <xs:element name="VerticalGroup" type="LayoutGroup" />
+            <xs:element name="Text" type="Text" />
+            <xs:element name="Image" />
+        </xs:choice>
+    </xs:group>
+</xs:schema>
