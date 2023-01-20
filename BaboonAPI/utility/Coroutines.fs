@@ -1,8 +1,16 @@
-﻿module BaboonAPI.Internal.Coroutines
+﻿module BaboonAPI.Utility.Coroutines
 
 open System
 open UnityEngine
 
+/// <summary>Async operation type</summary>
+/// <remarks>
+/// Can be run inside coroutine computation expressions:
+/// <code lang="fsharp">coroutine {
+///  let! assetBundle = openAssetBundleFromFile "mybundle.assetbundle"
+///  printf $"Loaded {assetBundle.name}"
+///}</code>
+/// </remarks>
 type IYieldWithResult<'r> =
     abstract Coroutine : YieldInstruction
     abstract Result : 'r
@@ -48,4 +56,5 @@ type CoroutineBuilder() =
 
     member _.Run (result: YieldInstruction seq) = result.GetEnumerator()
 
+/// Unity coroutine computation expression
 let coroutine = CoroutineBuilder()

@@ -2,7 +2,7 @@
 
 open System.Reflection.Emit
 open BaboonAPI.Hooks.Initializer
-open BaboonAPI.Internal.Coroutines
+open BaboonAPI.Utility.Coroutines
 open HarmonyLib
 open UnityEngine
 open UnityEngine.UI
