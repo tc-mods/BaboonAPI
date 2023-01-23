@@ -51,6 +51,9 @@ type private GameControllerExtension() =
         instance.bgcontroller.fullbgobject <- bgObj
         instance.bgcontroller.songname <- l.trackref
 
+        // Call delayed setup with the now-cloned object
+        l.SetUpBackgroundDelayed instance.bgcontroller bgObj
+
         // Start background task next frame
         instance.StartCoroutine("loadAssetBundleResources") |> ignore
 
@@ -63,14 +66,6 @@ type private GameControllerExtension() =
 
         loadedTrack <- Some l
 
-        ()
-
-    static member DelayedBackgroundSetup (controller: BGController) (bg: GameObject) =
-        match loadedTrack with
-        | Some l ->
-            l.SetUpBackgroundDelayed controller bg
-        | None ->
-            logger.LogWarning "Background setup called with no loaded track"
         ()
 
     static member LoadChart(trackref: string): SavedLevel =
@@ -155,10 +150,3 @@ type GameControllerPatch() =
         ___mySoundAssetBundle <- null
 
         false
-
-    [<HarmonyPostfix>]
-    [<HarmonyPatch(typeof<BGController>, "setUpBGControllerRefsDelayed")>]
-    static member DelayedSetupPostfix(__instance: BGController, ___fullbgobject: GameObject) =
-        GameControllerExtension.DelayedBackgroundSetup __instance ___fullbgobject
-
-        ()
