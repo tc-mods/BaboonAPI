@@ -1,49 +1,60 @@
-﻿namespace BaboonAPI.UI.AST
+﻿namespace rec BaboonAPI.UI.AST
 
 open UnityEngine
-open UnityEngine.EventSystems
 open UnityEngine.UI
 
-module UIHelper =
-    let makeElement<'ui when 'ui :> Component> () =
+module InterfaceBuilder =
+    let private makeElement<'ui when 'ui :> Component> () =
         let gameObject = GameObject()
         gameObject.AddComponent<'ui>()
 
-type IInterfaceNode =
-    abstract Children : IInterfaceNode list
-    abstract Make : unit -> UIBehaviour
+    let private setParent (parent: Component) (child: Component) =
+        child.transform.SetParent parent.transform
 
-[<AbstractClass>]
-type AbstractInterfaceNode<'ui when 'ui :> UIBehaviour>(attributes: Map<string, string>, children) =
-    abstract Make : unit -> 'ui
-    abstract ApplyAttributes : element: 'ui -> unit
+    let rec buildTree (root: ElementType) : Component =
+        match root with
+        | HorizontalGroup(attrs, children) ->
+            let ui = makeElement<HorizontalLayoutGroup>()
+            ui.padding <- attrs.padding
 
-    default _.ApplyAttributes el =
+            Seq.map buildTree children
+            |> Seq.iter (setParent ui)
 
-        ()
+            ui
+        | VerticalGroup(attrs, children) ->
+            let ui = makeElement<VerticalLayoutGroup>()
+            ui.padding <- attrs.padding
 
-    member _.Attributes = attributes
+            Seq.map buildTree children
+            |> Seq.iter (setParent ui)
 
-    interface IInterfaceNode with
-        member this.Children = children
-        member this.Make () = this.Make()
+            ui
+        | Text(attrs, content) ->
+            let ui = makeElement<UnityEngine.UI.Text>()
+            ui.alignment <- TextAnchor.UpperLeft // TODO
+            ui.color <- Color(1f, 1f, 1f)
+            ui.fontSize <- attrs.fontSize
+            ui.text <- content
 
-[<AbstractClass>]
-type AbstractLayoutGroup<'ui when 'ui :> LayoutGroup>(attributes, children) =
-    inherit AbstractInterfaceNode<'ui>(attributes, children)
+            ui
+        | Image src ->
+            let ui = makeElement<UnityEngine.UI.Image>()
+            // TODO ui.sprite <- src
 
-    default _.ApplyAttributes element =
-        element.padding <- RectOffset()
-        ()
+            ui
 
-type HorizontalLayoutNode(attributes, children) =
-    inherit AbstractLayoutGroup<HorizontalLayoutGroup>(attributes, children)
+    let buildLayout (roots: ElementType list) =
+        let canvas = makeElement<Canvas>()
+        canvas.renderMode <- RenderMode.ScreenSpaceOverlay
 
-    let spacing = float32 attributes["spacing"]
+        roots |> Seq.map buildTree |> Seq.iter (setParent canvas)
+        canvas
 
-    override this.ApplyAttributes(element) =
-        base.ApplyAttributes element
-        element.spacing <- spacing
+type LayoutGroupAttrs = { padding: RectOffset }
+type TextAttrs = { align: string; fontSize: int; color: string; }
 
-    override this.Make() =
-        UIHelper.makeElement()
+type ElementType =
+    | HorizontalGroup of attrs: LayoutGroupAttrs * ElementType list
+    | VerticalGroup of attrs: LayoutGroupAttrs * ElementType list
+    | Text of attrs: TextAttrs * content: string
+    | Image of src: string

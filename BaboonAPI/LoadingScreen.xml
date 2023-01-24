@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Layout xmlns="http://baboonapi.trombone.wiki/ui/schema">
     <VerticalGroup padding="10">
-        <Text align="center" content="Loading..." font-size="16" />
+        <Text align="center" font-size="16">Loading mods</Text>
+        <Text align="center" font-size="14">Initializing your installed mods...</Text>
     </VerticalGroup>
 </Layout>

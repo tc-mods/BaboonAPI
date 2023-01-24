@@ -7,7 +7,7 @@
 
     <ItemGroup>
         <Compile Include="ast\Elements.fs" />
-        <Compile Include="ast\Builder.fs" />
+        <Compile Include="ast\Parser.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>
 
@@ -17,6 +17,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="Schema.xsd" />
+      <EmbeddedResource Include="Schema.xsd" />
     </ItemGroup>
 </Project>

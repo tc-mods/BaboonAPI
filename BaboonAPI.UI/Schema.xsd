@@ -1,7 +1,38 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    elementFormDefault="qualified"
-    targetNamespace="http://baboonapi.trombone.wiki/ui/schema">
+           elementFormDefault="qualified"
+           targetNamespace="http://baboonapi.trombone.wiki/ui/schema">
+
+    <xs:complexType name="LayoutGroup">
+        <xs:sequence>
+            <xs:group xmlns:sch="http://baboonapi.trombone.wiki/ui/schema" ref="sch:AllElements" minOccurs="0"
+                      maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="padding" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="Text" xmlns:sch="http://baboonapi.trombone.wiki/ui/schema">
+        <xs:complexContent>
+            <xs:restriction base="xs:string">
+                <xs:attribute name="align" type="xs:string"/>
+                <xs:attribute name="font-size" type="xs:positiveInteger"/>
+                <xs:attribute name="color" type="xs:string"/>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="Image">
+        <xs:attribute name="src" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:group name="AllElements" xmlns:sch="http://baboonapi.trombone.wiki/ui/schema">
+        <xs:choice>
+            <xs:element name="HorizontalGroup" type="sch:LayoutGroup"/>
+            <xs:element name="VerticalGroup" type="sch:LayoutGroup"/>
+            <xs:element name="Text" type="sch:Text"/>
+            <xs:element name="Image" type="sch:Image"/>
+        </xs:choice>
+    </xs:group>
 
     <xs:element name="Layout">
         <xs:annotation>
@@ -9,37 +40,9 @@
         </xs:annotation>
         <xs:complexType>
             <xs:sequence>
-                <xs:group ref="AllElements" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:group xmlns:sch="http://baboonapi.trombone.wiki/ui/schema" ref="sch:AllElements" minOccurs="0"
+                          maxOccurs="unbounded"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
-
-    <xs:complexType name="LayoutGroup">
-        <xs:sequence>
-            <xs:group ref="AllElements" minOccurs="0" maxOccurs="unbounded" />
-        </xs:sequence>
-        <xs:attribute name="padding" type="xs:string"/>
-    </xs:complexType>
-
-    <xs:complexType name="Graphics">
-        <xs:attribute name="color" type="xs:string" />
-    </xs:complexType>
-    <xs:complexType name="Text">
-        <xs:complexContent>
-            <xs:extension base="Graphics">
-                <xs:attribute name="align" type="xs:string" />
-                <xs:attribute name="content" type="xs:string" />
-                <xs:attribute name="font-size" type="xs:positiveInteger" />
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-
-    <xs:group name="AllElements">
-        <xs:choice>
-            <xs:element name="HorizontalGroup" type="LayoutGroup" />
-            <xs:element name="VerticalGroup" type="LayoutGroup" />
-            <xs:element name="Text" type="Text" />
-            <xs:element name="Image" />
-        </xs:choice>
-    </xs:group>
 </xs:schema>
