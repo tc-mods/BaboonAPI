@@ -22,7 +22,8 @@ module private CustomSaveController =
 
     let private serializer = JsonSerializer.Create()
 
-    let dataPath (index: int) = $"{Application.persistentDataPath}/baboonapi_save_{index}.json"
+    let dataPath (index: int) = $"{Application.persistentDataPath}/baboonapi_save_{index}.dat"
+    let oldDataPath (index: int) = $"{Application.persistentDataPath}/baboonapi_save_{index}.json"
 
     let SavePluginData (index: int) =
         let data =
@@ -36,7 +37,13 @@ module private CustomSaveController =
         serializer.Serialize (writer, data)
 
     let LoadPluginData (index: int) =
-        use fd = File.Open(dataPath index, FileMode.Open)
+        let path =
+            if (File.Exists (dataPath index)) then
+                dataPath index
+            else
+                oldDataPath index
+
+        use fd = File.Open(path, FileMode.Open)
         use stream = new StreamReader(fd)
         use reader = new JsonTextReader(stream)
 
