@@ -1,5 +1,7 @@
 ﻿module BaboonAPI.UI.AST.Parser
 
+open System
+open System.Globalization
 open System.Xml.Linq
 open UnityEngine
 
@@ -18,6 +20,27 @@ let parsePadding (el: XElement) =
     | [| t; r; b; l |] -> RectOffset(l, r, t, b)
     | _ -> failwith "invalid padding attribute"
 
+let parseAlignment (el: XElement) =
+    let input = parseAttribute "align" el
+    match input with
+    | "top-left" -> TextAnchor.UpperLeft
+    | "top" -> TextAnchor.UpperCenter
+    | "top-right" -> TextAnchor.UpperRight
+    | "left" -> TextAnchor.MiddleLeft
+    | "center" -> TextAnchor.MiddleCenter
+    | "right" -> TextAnchor.MiddleRight
+    | "bottom-left" -> TextAnchor.LowerLeft
+    | "bottom" -> TextAnchor.LowerCenter
+    | "bottom-right" -> TextAnchor.LowerRight
+    | _ -> failwith "invalid align attribute"
+
+let parseColor (el: XElement) =
+    let input = parseAttribute "color" el
+    let rgb = Int32.Parse(input, NumberStyles.HexNumber)
+    let r, g, b = (rgb >>> 16, rgb >>> 8 &&& 0xFF, rgb &&& 0xFF)
+
+    Color32(byte r, byte g, byte b, 255uy)
+
 let rec parseElement (el: XElement) =
     match el.Name.LocalName with
     | "HorizontalGroup" ->
@@ -28,8 +51,8 @@ let rec parseElement (el: XElement) =
         ElementType.VerticalGroup ({ padding = parsePadding el }, Seq.toList children)
     | "Text" ->
         ElementType.Text ({
-            align = "" // TODO
-            color = "" // TODO
+            align = parseAlignment el
+            color = parseColor el
             fontSize = (parseAttribute "fontSize" el |> int)
         }, el.Value)
     | _ -> failwith "invalid element"

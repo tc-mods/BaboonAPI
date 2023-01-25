@@ -31,8 +31,8 @@ module InterfaceBuilder =
             ui
         | Text(attrs, content) ->
             let ui = makeElement<UnityEngine.UI.Text>()
-            ui.alignment <- TextAnchor.UpperLeft // TODO
-            ui.color <- Color(1f, 1f, 1f)
+            ui.alignment <- attrs.align
+            ui.color <- attrs.color
             ui.fontSize <- attrs.fontSize
             ui.text <- content
 
@@ -51,7 +51,7 @@ module InterfaceBuilder =
         canvas
 
 type LayoutGroupAttrs = { padding: RectOffset }
-type TextAttrs = { align: string; fontSize: int; color: string; }
+type TextAttrs = { align: TextAnchor; fontSize: int; color: Color32; }
 
 type ElementType =
     | HorizontalGroup of attrs: LayoutGroupAttrs * ElementType list
