@@ -41,7 +41,7 @@ type internal BaseGameTrack(data: string[]) =
 
         member this.LoadTrack() =
             let trackref = (this :> TromboneTrack).trackref
-            let bundle = AssetBundle.LoadFromFile $"{Application.dataPath}/StreamingAssets/trackassets/{trackref}"
+            let bundle = AssetBundle.LoadFromFile $"{Application.streamingAssetsPath}/trackassets/{trackref}"
             new BaseGameLoadedTrack (trackref, bundle)
 
         member this.IsVisible() =
