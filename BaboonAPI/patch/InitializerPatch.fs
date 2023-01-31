@@ -92,8 +92,8 @@ type BrandingPatch() =
 
     [<HarmonyPatch("epwarning")>]
     [<HarmonyPostfix>]
-    static member WarningPostfix (__instance: BrandingController, ___failed_to_init_error: GameObject) =
-        ModInitializer.Initialize __instance ___failed_to_init_error
+    static member WarningPostfix (__instance: BrandingController, ___failed_to_load_error: GameObject) =
+        ModInitializer.Initialize __instance ___failed_to_load_error
         |> __instance.StartCoroutine
         |> ignore
         ()

@@ -10,7 +10,7 @@ module private ResultExt =
         use e = s.GetEnumerator()
         let mutable error = None
 
-        while e.MoveNext() && Option.isNone error do
+        while Option.isNone error && e.MoveNext() do
             match e.Current with
             | Ok _ -> ()
             | Error err -> error <- Some err
