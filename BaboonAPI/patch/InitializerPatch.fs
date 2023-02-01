@@ -9,41 +9,56 @@ open UnityEngine.UI
 
 module private ModInitializer =
     let Initialize (bc: BrandingController) = coroutine {
-        yield WaitForSeconds(6.5f)
-
-        let title = bc.epwarningtxt1.GetComponent<Text>()
-        let desc = bc.epwarningtxt2.GetComponent<Text>()
-
-        title.text <- "Loading mods"
-        desc.text <- "Initializing your installed mods..."
-
-        LeanTween.rotateZ(bc.epwarningtxt1, 0f, 0.45f).setEaseOutQuart() |> ignore
-        LeanTween.rotateZ(bc.epwarningtxt2, 0f, 0.45f).setEaseOutQuart() |> ignore
-        LeanTween.moveLocalX(bc.epwarningtxt1, 0f, 0.45f).setEaseOutQuart() |> ignore
-        LeanTween.moveLocalX(bc.epwarningtxt2, 0f, 0.45f).setEaseOutQuart() |> ignore
+        let failtxt = bc.failed_to_load_error.GetComponentInChildren<Text>()
 
         let initResult = GameInitializationEvent.EVENT.invoker.Initialize()
         match initResult with
         | Ok _ ->
-            desc.text <- "All your mods loaded successfully!\nHappy tooting!"
-            yield WaitForSeconds(2.0f)
+            let successTxt = GameObject("BaboonApiModsText")
+            let s = successTxt.AddComponent<Text>()
+            let rect = successTxt.GetComponent<RectTransform>()
+            s.font <- failtxt.font
+            s.fontSize <- 20
+            s.alignment <- TextAnchor.LowerLeft
+            s.text <- "<color=#90EE90>All your mods loaded successfully!\nHappy tooting!</color>"
 
-            LeanTween.rotateZ(bc.epwarningtxt1, 65f, 0.45f).setEaseInQuart() |> ignore
-            LeanTween.rotateZ(bc.epwarningtxt2, 65f, 0.45f).setEaseInQuart() |> ignore
-            LeanTween.moveLocalX(bc.epwarningtxt1, -1600f, 0.45f).setEaseInQuart() |> ignore
-            LeanTween.moveLocalX(bc.epwarningtxt2, 1600f, 0.45f).setEaseInQuart() |> ignore
+            rect.SetParent bc.epwarningcg.transform
+            rect.pivot <- Vector2(0f, 0f)
+            rect.anchorMin <- Vector2(0f, 0f)
+            rect.anchorMax <- Vector2(1f, 1f)
+            rect.offsetMin <- Vector2(10f, -50f)
+            rect.offsetMax <- Vector2(250f, 30f)
 
-            bc.Invoke("killandload", 0.45f)
+            LeanTween.value(-50f, 30f, 0.5f)
+                .setEaseInOutQuad()
+                .setOnUpdate(fun (value: float32) ->
+                    rect.offsetMin <- Vector2(10f, value))
+                |> ignore
+
+            LeanTween.value(10f, -500f, 0.5f)
+                .setEaseOutQuad()
+                .setDelay(5.5f)
+                .setOnUpdate(fun (value: float32) ->
+                    rect.offsetMin <- Vector2(value, 30f))
+                |> ignore
+
+            bc.Invoke("killandload", 6.45f)
         | Error err ->
             let meta = err.PluginInfo.Metadata
-            desc.text <-
-                $"There was an error loading {meta.Name} {meta.Version}:
+            failtxt.verticalOverflow <- VerticalWrapMode.Overflow
+            failtxt.alignment <- TextAnchor.UpperCenter
+            failtxt.text <- String.concat "\n" [
+                "<size=27>Mod initialization failure!</size>"
+                $"There was an error loading mod <color=#F3385A>{meta.Name}</color> {meta.Version}:"
+                ""
+                $"<color=#CCCCCC>{err.Message}</color>"
+                ""
+                "The mod is probably just out of date! Please update it!"
+                $"(source: <color=#23FFFF>{err.PluginInfo.Location}</color>)"
+            ]
 
-                {err.Message}
-
-                The mod is probably just out of date!
-                ({err.PluginInfo.Location})"
-            // TODO add quit button
+            bc.epwarningcg.gameObject.SetActive false
+            bc.failed_to_load_error.SetActive true
 
         ()
     }
