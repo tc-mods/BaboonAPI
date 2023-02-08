@@ -52,6 +52,10 @@ module private CustomSaveController =
             CustomSaveRegistry.LoadAll data.PluginData
         else
             raise (IncompatibleVersion (CustomSaveVersion, data.Version))
+    
+    let DeletePluginData (index: int) =
+        File.Delete (dataPath index)
+        File.Delete (oldDataPath index)
 
 [<HarmonyPatch(typeof<SaverLoader>)>]
 type SaverLoaderPatch() =
@@ -72,3 +76,8 @@ type SaverLoaderPatch() =
     [<HarmonyPatch("updateSavedGame")>]
     static member SavePostfix() =
         CustomSaveController.SavePluginData(SaverLoader.global_saveindex)
+        
+    [<HarmonyPostfix>]
+    [<HarmonyPatch("deleteSavedGame")>]
+    static member DeletePostfix(whichindex: int) =
+        CustomSaveController.DeletePluginData(whichindex)
