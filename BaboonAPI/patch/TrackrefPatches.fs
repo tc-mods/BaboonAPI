@@ -5,6 +5,7 @@ open System.Reflection.Emit
 open BaboonAPI.Internal
 open BepInEx.Logging
 open HarmonyLib
+open UnityEngine
 
 type private TrackrefAccessor() =
     static let logger = Logger.CreateLogSource "BaboonAPI.TrackrefAccessor"
@@ -24,6 +25,9 @@ type private TrackrefAccessor() =
         data.tempo <- track.tempo
         data.trackref <- track.trackref
         data
+        
+    static let makeSongGraph _ =
+        Array.init 5 (fun _ -> Random.Range (0, 100))
 
     static member finalLevelIndex () = TrackAccessor.fetchTrackIndex "einefinal"
 
@@ -46,6 +50,9 @@ type private TrackrefAccessor() =
         | TrackAccessor.DuplicateTrackrefException trackref ->
             // TODO: Show an error popup in game? The game doesn't have anything for this...
             logger.LogFatal $"Duplicate trackref {trackref}, songs not loading!"
+    
+    static member populateSongGraphs () =
+        Array.init (TrackAccessor.trackCount()) makeSongGraph
 
 [<HarmonyPatch(typeof<SaverLoader>, "loadTrackData")>]
 type TrackLoaderPatch() =
@@ -87,12 +94,17 @@ type TrackTitlePatches() =
                 CodeInstruction.LoadField(typeof<LevelSelectController>, "alltrackslist")
                 CodeInstruction.Call(typeof<TrackrefAccessor>, "doLevelSelectStart",
                                [| typeof<LevelSelectController>; typeof<List<SingleTrackData>> |])
+                
+                // populate song graphs
+                CodeInstruction OpCodes.Ldarg_0
+                CodeInstruction.Call(typeof<TrackrefAccessor>, "populateSongGraphs")
+                CodeInstruction.StoreField(typeof<LevelSelectController>, "songgraphs")
             |])
             .MatchForward(false, [|
                 CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
                 CodeMatch OpCodes.Ldlen
             |])
             .ThrowIfInvalid("Could not find data_tracktitles length lookup in LevelSelectController#Start")
-            .SetInstructionAndAdvance(CodeInstruction.Call(typeof<TrackrefAccessor>, "trackCount"))
+            .SetInstructionAndAdvance(CodeInstruction OpCodes.Ldc_I4_0) // "j < 0"; set for loop to not iterate
             .RemoveInstruction() // remove ldlen
             .InstructionEnumeration()
