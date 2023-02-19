@@ -56,7 +56,16 @@ type TrackScorePatches() =
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<SaveSlotController>, "checkScores")>]
     static member SkipCheckingScores() =
-        // we don't need to do this, our saver will just make things as needed
+        // migrate scores!
+        let neededMigration =
+            match baseGameStorage with
+            | Some bgs -> bgs.migrateScores()
+            | None -> false
+        
+        if neededMigration then
+            SaverLoader.updateSavedGame()
+
+        // we don't need to do anything else, our saver will just make things as needed
         false
 
     [<HarmonyPrefix>]

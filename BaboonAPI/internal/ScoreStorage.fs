@@ -85,6 +85,9 @@ type CustomTrackScoreStorage() =
 
     member _.allScores () : TrackScores seq =
         scores.Values
+    
+    member _.importScore (ts: TrackScores) =
+        scores <- Map.add ts.trackref ts scores
 
     interface IScoreStorage with
         member this.Load trackref =
@@ -111,6 +114,8 @@ type CustomTrackScoreStorage() =
             |> Map.map (fun _ score -> { Rank = rankString score.highestRank
                                          HighScores = score.highScores })
 
+let customStorage = CustomTrackScoreStorage()
+
 type BaseTrackScoreStorage(trackrefs: string list) =
     let scoreFromData (data: string[]) =
         { trackref = data[0]
@@ -134,6 +139,36 @@ type BaseTrackScoreStorage(trackrefs: string list) =
     let findEmptySlot () =
         GlobalVariables.localsave.data_trackscores
         |> Seq.tryFindIndex (fun s -> s = null || s[0] = "")
+
+    /// Old TrombLoader stored custom scores in the basegame array - whereas we put them in a custom storage.
+    /// So this function is responsible for removing old entries from the basegame score storage and saving them
+    /// in custom storage instead.
+    member this.migrateScores () =
+        // Find all non-basegame entries
+        let scores =
+            GlobalVariables.localsave.data_trackscores
+            |> Seq.filter (fun s -> s <> null && not (List.contains s[0] trackrefs))
+            |> Seq.toList
+
+        if not scores.IsEmpty then
+            for s in scores do
+                customStorage.importScore (scoreFromData s)
+
+            log.LogDebug $"Imported {scores.Length} scores from basegame save"
+
+            // Overwrite basegame array to clean out these entries
+            let filtered =
+                GlobalVariables.localsave.data_trackscores
+                |> Seq.filter (fun s -> s <> null && (List.contains s[0] trackrefs))
+
+            GlobalVariables.localsave.data_trackscores <-
+                Seq.append filtered (Seq.init 100 (fun _ -> null))
+                |> Seq.take 100
+                |> Array.ofSeq
+
+            true
+        else
+            false
 
     member _.canStore (trackref: string) =
         trackrefs |> List.contains trackref
@@ -177,7 +212,6 @@ type BaseTrackScoreStorage(trackrefs: string list) =
 
             ()
 
-let customStorage = CustomTrackScoreStorage()
 let mutable baseGameStorage = None
 
 let initialize (trackrefs: string list) =
