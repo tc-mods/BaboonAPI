@@ -147,7 +147,7 @@ type BaseTrackScoreStorage(trackrefs: string list) =
         // Find all non-basegame entries
         let scores =
             GlobalVariables.localsave.data_trackscores
-            |> Seq.filter (fun s -> s <> null && not (List.contains s[0] trackrefs))
+            |> Seq.filter (fun s -> s <> null && s[0] <> "" && not (List.contains s[0] trackrefs))
             |> Seq.toList
 
         if not scores.IsEmpty then
