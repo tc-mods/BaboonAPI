@@ -23,7 +23,7 @@
     <PropertyGroup>
         <PackageId>TromboneChamp.BaboonAPI</PackageId>
         <Title>BaboonAPI</Title>
-        <Version>2.0.6</Version>
+        <Version>2.1.0</Version>
         <Authors>offbeatwitch</Authors>
         <Company>TromboneChamps</Company>
         <PackageTags>Trombone Champ</PackageTags>
