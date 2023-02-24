@@ -150,7 +150,12 @@ type BaseTrackScoreStorage(trackrefs: string list) =
             |> Seq.filter (fun s -> s <> null && s[0] <> "" && not (List.contains s[0] trackrefs))
             |> Seq.toList
 
-        if not scores.IsEmpty then
+        // Hotfix for saves broken by 2.1.0
+        let isBroken =
+            GlobalVariables.localsave.data_trackscores
+            |> Array.contains null
+
+        if (not scores.IsEmpty) || isBroken then
             for s in scores do
                 customStorage.importScore (scoreFromData s)
 
