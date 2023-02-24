@@ -52,6 +52,10 @@ type TrackScores =
       highestRank: Rank option
       highScores: int list }
 
+    /// Check if this score is empty (no rank and all highscores zero)
+    member this.isEmpty =
+        this.highestRank.IsNone && Seq.forall (fun i -> i = 0) this.highScores
+
     member this.updateScore (achieved: AchievedScore) =
         let highestRank =
             match this.highestRank with
@@ -157,7 +161,11 @@ type BaseTrackScoreStorage(trackrefs: string list) =
 
         if (not scores.IsEmpty) || isBroken then
             for s in scores do
-                customStorage.importScore (scoreFromData s)
+                let toImport = scoreFromData s
+
+                // Skip empty scores to avoid overwriting good data with bad
+                if (not toImport.isEmpty) then
+                    customStorage.importScore toImport
 
             log.LogDebug $"Imported {scores.Length} scores from basegame save"
 
