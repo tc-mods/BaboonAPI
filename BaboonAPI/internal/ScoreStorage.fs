@@ -85,7 +85,7 @@ type CustomTrackScoreStorage() =
 
     member _.allScores () : TrackScores seq =
         scores.Values
-    
+
     member _.importScore (ts: TrackScores) =
         scores <- Map.add ts.trackref ts scores
 
@@ -162,7 +162,7 @@ type BaseTrackScoreStorage(trackrefs: string list) =
                 |> Seq.filter (fun s -> s <> null && (List.contains s[0] trackrefs))
 
             GlobalVariables.localsave.data_trackscores <-
-                Seq.append filtered (Seq.init 100 (fun _ -> null))
+                Seq.append filtered (Seq.init 100 (fun _ -> scoreToData emptyScore))
                 |> Seq.take 100
                 |> Array.ofSeq
 
