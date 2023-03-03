@@ -10,22 +10,6 @@ open UnityEngine
 type private TrackrefAccessor() =
     static let logger = Logger.CreateLogSource "BaboonAPI.TrackrefAccessor"
 
-    static let makeSingleTrackData (rt: TrackAccessor.RegisteredTrack) =
-        let track = rt.track
-        let data = SingleTrackData()
-        data.trackname_long <- track.trackname_long
-        data.trackname_short <- track.trackname_short
-        data.trackindex <- rt.trackIndex
-        data.artist <- track.artist
-        data.year <- track.year
-        data.desc <- track.desc
-        data.difficulty <- track.difficulty
-        data.genre <- track.genre
-        data.length <- track.length
-        data.tempo <- track.tempo
-        data.trackref <- track.trackref
-        data
-        
     static let makeSongGraph _ =
         Array.init 5 (fun _ -> Random.Range (0, 100))
 
@@ -38,19 +22,19 @@ type private TrackrefAccessor() =
     static member trackCount () = TrackAccessor.trackCount()
 
     static member fetchChosenTrack trackref =
-        TrackAccessor.fetchRegisteredTrack trackref |> makeSingleTrackData
+        (TrackAccessor.fetchRegisteredTrack trackref).asTrackData
 
     static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: List<SingleTrackData>) =
         try
             TrackAccessor.allTracks()
             |> Seq.filter (fun s -> s.track.IsVisible())
-            |> Seq.map makeSingleTrackData
+            |> Seq.map (fun s -> s.asTrackData)
             |> alltrackslist.AddRange
         with
         | TrackAccessor.DuplicateTrackrefException trackref ->
             // TODO: Show an error popup in game? The game doesn't have anything for this...
             logger.LogFatal $"Duplicate trackref {trackref}, songs not loading!"
-    
+
     static member populateSongGraphs () =
         Array.init (TrackAccessor.trackCount()) makeSongGraph
 
@@ -94,7 +78,7 @@ type TrackTitlePatches() =
                 CodeInstruction.LoadField(typeof<LevelSelectController>, "alltrackslist")
                 CodeInstruction.Call(typeof<TrackrefAccessor>, "doLevelSelectStart",
                                [| typeof<LevelSelectController>; typeof<List<SingleTrackData>> |])
-                
+
                 // populate song graphs
                 CodeInstruction OpCodes.Ldarg_0
                 CodeInstruction.Call(typeof<TrackrefAccessor>, "populateSongGraphs")
