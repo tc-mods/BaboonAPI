@@ -17,6 +17,7 @@
     <!-- fsdocs on netlify -->
     <PropertyGroup Condition="'$(NETLIFY)' == 'true' And '$(CONTEXT)' != 'production'">
         <PackageProjectUrl>$(DEPLOY_PRIME_URL)</PackageProjectUrl>
+        <RepositoryBranch>$(BRANCH)</RepositoryBranch>
     </PropertyGroup>
 
     <!-- nuget settings -->

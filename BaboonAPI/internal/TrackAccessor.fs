@@ -56,6 +56,8 @@ let fetchTrack (ref: string) = tracks.Value[ref].track
 
 let fetchRegisteredTrack (ref: string) = tracks.Value[ref]
 
+let tryFetchRegisteredTrack (ref: string) = Map.tryFind ref tracks.Value
+
 let fetchTrackIndex (ref: string) = tracks.Value[ref].trackIndex
 
 let trackCount () = tracksByIndex.Value.Length
