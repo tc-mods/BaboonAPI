@@ -79,3 +79,37 @@ if (track is CustomTrack ct)
 }
 ```
 *)
+
+(**
+## Looking up scores
+
+If you want to look up locally saved high scores for a track, you can use
+`cref:M:BaboonAPI.Hooks.Tracks.TrackLookup.trackScore(System.String)`:
+*)
+
+let possibleScores = TrackLookup.lookupScore "BakaMitai"
+
+(**
+If the track has been played at least once, you'll get a `Some(SavedTrackScore)` back!
+Otherwise, you'll get None. Note that the track might exist even if its score hasn't been saved -
+use `tryLookup` if you want to check that!
+*)
+
+match possibleScores with
+| Some score ->
+    let lastFiveHighScores = score.highScores
+    let highestRank = score.highestRank
+    // Now we have highscores!
+    ()
+| None ->
+    // Track wasn't found in score storage!
+    ()
+
+(**
+## Additional utilities
+
+If you need a `SingleTrackData` for whatever reason, you can convert any `TromboneTrack` easily:
+*)
+
+let trackData = TrackLookup.toTrackData bakaMitaiTrack
+trackData.trackname_long // => "Baka Mitai"

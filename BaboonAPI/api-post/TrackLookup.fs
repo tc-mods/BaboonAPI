@@ -30,7 +30,7 @@ type public SavedTrackScore =
 
 /// <summary>Get the current high scores for a track.</summary>
 /// <returns>None if there is no saved data for the trackref, Some otherwise.</returns>
-let public trackScore (trackref: string): SavedTrackScore option =
+let public lookupScore (trackref: string): SavedTrackScore option =
     let storage = getStorageFor trackref
     if storage.IsSaved trackref then
         let score = storage.Load trackref
