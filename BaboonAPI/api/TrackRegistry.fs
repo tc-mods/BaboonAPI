@@ -63,13 +63,13 @@ type public TromboneTrack =
 /// <summary>
 /// Event-based API for registering new tracks.
 /// </summary>
-/// <remarks>
+/// <example>
 /// <code>open BaboonAPI.Hooks.Tracks
 ///
 ///member _.Awake () =
 ///    TrackRegistrationEvent.EVENT.Register MyTrackRegistrationListener()
 /// </code>
-/// </remarks>
+/// </example>
 module TrackRegistrationEvent =
     /// Track registration listener
     type public Listener =

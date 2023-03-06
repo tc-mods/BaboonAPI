@@ -32,6 +32,8 @@ type LoadError = { PluginInfo: PluginInfo
 /// Using the listener interface and the
 /// <see cref="M:BaboonAPI.Hooks.Initializer.GameInitializationEvent.attempt(BepInEx.PluginInfo,Microsoft.FSharp.Core.FSharpFunc{Microsoft.FSharp.Core.Unit,Microsoft.FSharp.Core.Unit})">attempt</see>
 /// method, you can perform fallible setup tasks that will be safely reported to the user if they go wrong.
+/// </remarks>
+/// <example>
 ///<code lang="fsharp">member this.Awake() =
 ///    GameInitializationEvent.EVENT.Register this
 ///
@@ -41,7 +43,7 @@ type LoadError = { PluginInfo: PluginInfo
 ///            // fallible logic goes here.
 ///        )
 ///</code>
-/// </remarks>
+/// </example>
 module GameInitializationEvent =
     /// Initialization event listener
     type Listener =
