@@ -1,14 +1,37 @@
 ﻿# Game Initialization API
 
+```
+[hide]
+open System
+```
+
+```
+open BaboonAPI.Hooks.Initializer
+```
+
 The initialization API lets you perform fallible setup tasks during
 game startup.
+
+```
+type ChimpanzeePlugin() =
+    inherit BaseUnityPlugin()
+    
+    member this.Awake() =
+        GameInitializationEvent.EVENT.Register this
+    
+    interface GameInitializationEvent.Listener with
+        member this.Initialize() =
+            GameInitializationEvent.attempt this.Info (fun () ->
+                raise (Exception "Oh no! We hit a problem while loading!")
+            )
+```
 
 Any exception thrown inside the initializer callback will be caught,
 and the game will safely stop loading and report the problem to the player.
 
-See `cref:T:BaboonAPI.Hooks.Initializer.GameInitializationEvent` for further details.
+![Screenshot of loading error](img/loading-error.png)
 
-## Example
+## C# Example
 
 ```csharp
 using BaboonAPI.Hooks.Initializer;
