@@ -39,6 +39,10 @@ type BaboonPlugin() =
 
                 // We've patched it now so we can call it.
                 SaverLoader.loadLevelData()
+                
+                // First-time backup.
+                ScoreStorage.baseGameStorage
+                |> Option.iter (fun bgs -> bgs.firstTimeBackup())
 
                 // Load all the tracks so we catch if something goes wrong
                 TrackAccessor.load()

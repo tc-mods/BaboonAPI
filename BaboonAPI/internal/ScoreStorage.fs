@@ -1,9 +1,11 @@
 ﻿module internal BaboonAPI.Internal.ScoreStorage
 
 open System
+open System.IO
 open BaboonAPI.Hooks.Saves
 open BepInEx.Logging
 open Newtonsoft.Json
+open UnityEngine
 
 let log = Logger.CreateLogSource "BaboonAPI.ScoreStorage"
 
@@ -148,6 +150,18 @@ type BaseTrackScoreStorage(trackrefs: string list) =
     let findEmptySlot () =
         GlobalVariables.localsave.data_trackscores
         |> Seq.tryFindIndex (fun s -> s = null || s[0] = "")
+        
+    let backupSaveSlot (slot: int) =
+        let savePath = $"{Application.persistentDataPath}/tchamp_savev100_{slot}.dat"
+        let backupPath = $"{Application.persistentDataPath}/baboonapi_{slot}_backup_firstrun.bak"
+        if File.Exists savePath && not (File.Exists backupPath) then
+            File.Copy(savePath, backupPath)
+
+    /// Create a first-run backup when a user launches with BaboonAPI installed (or relaunches after making a new save)
+    /// Migration code still isn't 100% perfect so this is a backup of old trombloader-era scores
+    member this.firstTimeBackup () =
+        for saveIndex in [0; 1; 2] do
+            backupSaveSlot saveIndex
 
     /// Old TrombLoader stored custom scores in the basegame array - whereas we put them in a custom storage.
     /// So this function is responsible for removing old entries from the basegame score storage and saving them
