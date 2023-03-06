@@ -25,7 +25,7 @@ let public allTracks (): TromboneTrack list =
 
 /// Highest rank & most recent 5 high scores for a track
 type public SavedTrackScore =
-    { highestRank: string option
+    { highestRank: string
       highScores: int list }
 
 /// <summary>Get the current high scores for a track.</summary>
@@ -35,7 +35,7 @@ let public lookupScore (trackref: string): SavedTrackScore option =
     if storage.IsSaved trackref then
         let score = storage.Load trackref
 
-        Some { highestRank = score.highestRank |> Option.map (fun r -> r.ToString())
+        Some { highestRank = rankString score.highestRank
                highScores = score.highScores }
     else
         None
