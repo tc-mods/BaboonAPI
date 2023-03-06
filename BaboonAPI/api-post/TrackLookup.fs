@@ -17,6 +17,12 @@ let public tryLookup (trackref: string): TromboneTrack option =
 let public toTrackData (track: TromboneTrack): SingleTrackData =
     TrackAccessor.toTrackData track
 
+/// Get a list of every track currently loaded
+let public allTracks (): TromboneTrack list =
+    TrackAccessor.allTracks()
+    |> Seq.map (fun rt -> rt.track)
+    |> Seq.toList
+
 /// Highest rank & most recent 5 high scores for a track
 type public SavedTrackScore =
     { highestRank: string option
