@@ -77,6 +77,8 @@ type IScoreStorage =
     abstract Save : score: AchievedScore -> unit
 
     abstract Load : trackref: string -> TrackScores
+    
+    abstract IsSaved : trackref: string -> bool
 
 [<Serializable>]
 [<CLIMutable>]
@@ -103,6 +105,9 @@ type CustomTrackScoreStorage() =
             let current = (this :> IScoreStorage).Load score.trackref
 
             scores <- Map.add score.trackref (current.updateScore score) scores
+
+        member this.IsSaved trackref =
+            scores |> Map.containsKey trackref
 
     interface ICustomSaveData<Map<string, SavedScore>> with
         member this.Convert o = o.ToObject()
@@ -224,6 +229,9 @@ type BaseTrackScoreStorage(trackrefs: string list) =
                     ()
 
             ()
+
+        member this.IsSaved trackref =
+            Option.isSome (findIndex trackref)
 
 let mutable baseGameStorage = None
 
