@@ -7,7 +7,7 @@ open BaboonAPI.Patch
 open BepInEx
 open HarmonyLib
 
-[<BepInPlugin("ch.offbeatwit.baboonapi.plugin", "BaboonAPI", "2.1.1.0")>]
+[<BepInPlugin("ch.offbeatwit.baboonapi.plugin", "BaboonAPI", "2.2.0.0")>]
 type BaboonPlugin() =
     inherit BaseUnityPlugin()
 
