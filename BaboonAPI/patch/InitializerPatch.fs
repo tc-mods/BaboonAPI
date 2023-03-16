@@ -8,12 +8,16 @@ open UnityEngine
 open UnityEngine.UI
 
 module private ModInitializer =
-    let Initialize (bc: BrandingController) = coroutine {
+    let mutable initResult = None
+
+    let Initialize () =
+        initResult <- Some (GameInitializationEvent.EVENT.invoker.Initialize ())
+
+    let ShowResult (bc: BrandingController) = coroutine {
         let failtxt = bc.failed_to_load_error.GetComponentInChildren<Text>()
 
-        let initResult = GameInitializationEvent.EVENT.invoker.Initialize()
         match initResult with
-        | Ok _ ->
+        | Some (Ok _) ->
             let successTxt = GameObject("BaboonApiModsText")
             let s = successTxt.AddComponent<Text>()
             let rect = successTxt.GetComponent<RectTransform>()
@@ -43,7 +47,7 @@ module private ModInitializer =
                 |> ignore
 
             bc.Invoke("killandload", 6.45f)
-        | Error err ->
+        | Some (Error err) ->
             let meta = err.PluginInfo.Metadata
             failtxt.verticalOverflow <- VerticalWrapMode.Overflow
             failtxt.alignment <- TextAnchor.UpperCenter
@@ -59,6 +63,22 @@ module private ModInitializer =
 
             bc.epwarningcg.gameObject.SetActive false
             bc.failed_to_load_error.SetActive true
+        | None ->
+            failtxt.verticalOverflow <- VerticalWrapMode.Overflow
+            failtxt.alignment <- TextAnchor.UpperLeft
+            failtxt.rectTransform.sizeDelta <- Vector2(980f, 365f)
+            failtxt.text <- String.concat "\n" [
+                "<size=27>Uh oh</size>"
+                "BaboonAPI's initializer event didn't fire! One of several things may have happened:"
+                "1. Trombone Champ updated and our initializer patch broke"
+                "2. Another mod is interfering with BaboonAPI, probably by accident"
+                "3. The evil doppelgänger <color=#F3385A>Trazom</color> is attempting to break your game"
+                ""
+                "Try updating your mods or disabling some temporarily?"
+            ]
+
+            bc.epwarningcg.gameObject.SetActive false
+            bc.failed_to_load_error.SetActive true
 
         ()
     }
@@ -66,6 +86,9 @@ module private ModInitializer =
 [<HarmonyPatch(typeof<BrandingController>)>]
 type BrandingPatch() =
     static let loadlevel_m = AccessTools.Method(typeof<SaverLoader>, "loadLevelData")
+
+    static member RunInitialize () =
+        ModInitializer.Initialize()
 
     // Remove SaverLoader.loadLevelData() call, we need to patch it first
     [<HarmonyPatch("Start")>]
@@ -75,7 +98,8 @@ type BrandingPatch() =
             .MatchForward(false, [|
                 CodeMatch (fun ins -> ins.Calls loadlevel_m)
             |])
-            .Set(OpCodes.Nop, null)
+            // Run our initializer in here instead
+            .Set(OpCodes.Call, AccessTools.Method(typeof<BrandingPatch>, "RunInitialize"))
             .InstructionEnumeration()
 
     [<HarmonyPatch("doHolyWowAnim")>]
@@ -94,7 +118,7 @@ type BrandingPatch() =
     [<HarmonyPatch("epwarning")>]
     [<HarmonyPostfix>]
     static member WarningPostfix (__instance: BrandingController) =
-        ModInitializer.Initialize __instance
+        ModInitializer.ShowResult __instance
         |> __instance.StartCoroutine
         |> ignore
         ()

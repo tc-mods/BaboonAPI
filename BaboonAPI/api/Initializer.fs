@@ -26,7 +26,7 @@ type LoadError = { PluginInfo: PluginInfo
 /// <namespacedoc>
 /// <summary>Safe mod initialization hooks</summary>
 /// </namespacedoc>
-/// 
+///
 /// <summary>Game initialization event</summary>
 /// <remarks>
 /// Using the listener interface and the
@@ -65,7 +65,7 @@ module GameInitializationEvent =
         with
         | err ->
             Debug.LogError err
-            Error { PluginInfo = info; Message = $"{err.Message}\n{err.Source}" }
+            Error { PluginInfo = info; Message = err.Message }
 
     /// Event bus
     let EVENT = EventFactory.create(fun listeners ->
@@ -74,12 +74,12 @@ module GameInitializationEvent =
                 listeners
                 |> Seq.map (fun l -> l.Initialize())
                 |> ResultExt.runUntilErr })
-    
+
     /// <summary>Helper function to quickly register a fallible initialization callback from C#</summary>
     /// <remarks>
     /// This function lets you easily set up an initialization callback in C# without having to convert to F# functions
     /// manually.
-    /// 
+    ///
     /// An exception thrown in here will safely stop the game loading, and the error will be displayed to the user.
     /// </remarks>
     /// <param name="info">Metadata used when displaying errors</param>
