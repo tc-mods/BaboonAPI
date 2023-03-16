@@ -21,6 +21,19 @@ type BaboonPlugin() =
         // Apply the initializer patchset
         harmony.PatchAll(typeof<BrandingPatch>)
 
+    member this.TryLoadTracks() =
+        try
+            TrackAccessor.load()
+            Ok(())
+        with
+        | TrackAccessor.DuplicateTrackrefException trackref ->
+            let msg = String.concat "\n" [
+                $"Duplicate tracks found with track ID '{trackref}'"
+                "Please check your songs folder for duplicates!"
+            ]
+            Error { PluginInfo = this.Info
+                    Message = msg }
+
     interface GameInitializationEvent.Listener with
         member this.Initialize() =
             this.Logger.LogInfo "Unlocking the secrets of the baboon..."
@@ -39,11 +52,8 @@ type BaboonPlugin() =
 
                 // We've patched it now so we can call it.
                 SaverLoader.loadLevelData()
-                
+
                 // First-time backup.
                 ScoreStorage.baseGameStorage
-                |> Option.iter (fun bgs -> bgs.firstTimeBackup())
-
-                // Load all the tracks so we catch if something goes wrong
-                TrackAccessor.load()
-                )
+                |> Option.iter (fun bgs -> bgs.firstTimeBackup()))
+            |> Result.bind this.TryLoadTracks
