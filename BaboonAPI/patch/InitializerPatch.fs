@@ -7,7 +7,7 @@ open HarmonyLib
 open UnityEngine
 open UnityEngine.UI
 
-module private ModInitializer =
+module internal ModInitializer =
     let mutable initResult = None
 
     let Initialize () =
@@ -57,7 +57,7 @@ module private ModInitializer =
                 ""
                 $"<color=#CCCCCC>{err.Message}</color>"
                 ""
-                "The mod is probably just out of date! Please update it!"
+                "Make sure your mods are up to date too!"
                 $"(source: <color=#23FFFF>{err.PluginInfo.Location}</color>)"
             ]
 
@@ -82,6 +82,9 @@ module private ModInitializer =
 
         ()
     }
+    
+    let IsInitialized () =
+        initResult |> Option.exists Result.isOk
 
 [<HarmonyPatch(typeof<BrandingController>)>]
 type BrandingPatch() =
