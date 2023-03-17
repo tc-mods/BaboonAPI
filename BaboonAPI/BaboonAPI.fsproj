@@ -10,7 +10,7 @@
         <PackageProjectUrl>https://baboonapi.trombone.wiki/</PackageProjectUrl>
         <RepositoryUrl>https://github.com/tc-mods/BaboonAPI/</RepositoryUrl>
         <FsDocsLicenseLink>https://github.com/tc-mods/BaboonAPI/blob/master/LICENSE.md</FsDocsLicenseLink>
-        <FsDocsReleaseNotesLink>#</FsDocsReleaseNotesLink>
+        <FsDocsReleaseNotesLink>https://github.com/tc-mods/BaboonAPI/releases</FsDocsReleaseNotesLink>
         <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
