@@ -14,7 +14,7 @@ module internal ModInitializer =
         initResult <- Some (GameInitializationEvent.EVENT.invoker.Initialize ())
 
     let ShowResult (bc: BrandingController) = coroutine {
-        let failtxt = bc.failed_to_load_error.GetComponentInChildren<Text>()
+        let failtxt = bc.failed_to_load_error.transform.Find("full_text").GetComponent<Text>()
 
         match initResult with
         | Some (Ok _) ->

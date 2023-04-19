@@ -57,7 +57,7 @@ type TrackTitlePatches() =
             CodeMatcher(instructions)
                 .MatchForward(false, [|
                     CodeMatch (fun ins -> ins.LoadsConstant(0L))
-                    CodeMatch OpCodes.Stloc_1
+                    CodeMatch OpCodes.Stloc_3
                 |])
                 .ThrowIfInvalid("Could not find start of injection point in LevelSelectController#Start")
 
