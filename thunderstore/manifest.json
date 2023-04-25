@@ -1,7 +1,7 @@
 {
   "name": "BaboonAPI",
   "description": "Trombone Champ modding API",
-  "version_number": "2.2.1",
+  "version_number": "2.2.2",
   "dependencies": [
     "BepInEx-BepInExPack_TromboneChamp-5.4.21",
     "TromboneChamps-FSharp_Core-6.0.6",
