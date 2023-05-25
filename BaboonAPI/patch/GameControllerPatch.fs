@@ -127,7 +127,7 @@ type GameControllerPatch() =
             CodeMatcher(instructions)
                 .MatchForward(true, [|
                     CodeMatch OpCodes.Ldnull
-                    CodeMatch OpCodes.Stloc_1
+                    CodeMatch OpCodes.Stloc_2
                 |])
                 .ThrowIfInvalid("Could not find injection point in GameController#tryToLoadLevel")
 
@@ -137,7 +137,7 @@ type GameControllerPatch() =
             .Insert([|
                 CodeInstruction OpCodes.Ldarg_1
                 CodeInstruction.Call(typeof<GameControllerExtension>, "LoadChart", [| typeof<string> |])
-                CodeInstruction OpCodes.Stloc_2
+                CodeInstruction OpCodes.Stloc_3
             |])
             .InstructionEnumeration()
 
