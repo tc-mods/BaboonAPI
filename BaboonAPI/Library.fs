@@ -46,6 +46,7 @@ type BaboonPlugin() =
                     typeof<TrackTitlePatches>
                     typeof<LoaderPatch>
                     typeof<GameControllerPatch>
+                    typeof<PausePatches>
                     typeof<SaverLoaderPatch>
                     typeof<TrackScorePatches>
                 ] |> List.iter harmony.PatchAll

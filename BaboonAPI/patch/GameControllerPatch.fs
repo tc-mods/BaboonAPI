@@ -57,6 +57,12 @@ type private GameControllerExtension() =
         // Start background task next frame
         instance.StartCoroutine("loadAssetBundleResources") |> ignore
 
+        // Set up pause/resume functionality
+        instance.track_is_pausable <-
+            match l with
+            | :? PauseAware as pauseable -> pauseable.CanResume // `track_is_pausable` actually controls resuming
+            | _ -> false
+
         // Usually this should be cleaned up by Unload, but let's just make sure...
         match loadedTrack with
         | Some prev ->
@@ -70,6 +76,18 @@ type private GameControllerExtension() =
 
     static member LoadChart(trackref: string): SavedLevel =
         (TrackAccessor.fetchTrack trackref).LoadChart()
+        
+    static member PauseTrack() =
+        match loadedTrack with
+        | Some (:? PauseAware as pa) ->
+            pa.OnPause()
+        | _ -> ()
+
+    static member ResumeTrack() =
+        match loadedTrack with
+        | Some (:? PauseAware as pa) ->
+            pa.OnResume()
+        | _ -> ()
 
     static member Unload() =
         match loadedTrack with
@@ -150,3 +168,17 @@ type GameControllerPatch() =
         ___mySoundAssetBundle <- null
 
         false
+
+[<HarmonyPatch>]
+type PausePatches() =
+    [<HarmonyPostfix>]
+    [<HarmonyPatch(typeof<PauseCanvasController>, "showPausePanel")>]
+    static member PausePostfix(__instance: PauseCanvasController) =
+        GameControllerExtension.PauseTrack()
+        ()
+    
+    [<HarmonyPostfix>]
+    [<HarmonyPatch(typeof<PauseCanvasController>, "resumeFromPause")>]
+    static member ResumePostfix(__instance: PauseCanvasController) =
+        GameControllerExtension.ResumeTrack()
+        ()

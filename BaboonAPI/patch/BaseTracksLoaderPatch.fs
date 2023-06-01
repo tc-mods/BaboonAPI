@@ -25,6 +25,13 @@ type internal BaseGameLoadedTrack(trackref: string, bundle: AssetBundle) =
             ()
 
         member this.trackref = trackref
+    
+    interface PauseAware with
+        member this.CanResume = true
+
+        member this.OnPause() = ()
+
+        member this.OnResume() = ()
 
 type internal BaseGameTrack(data: string[]) =
     interface TromboneTrack with

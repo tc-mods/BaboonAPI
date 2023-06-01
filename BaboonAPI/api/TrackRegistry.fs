@@ -61,6 +61,23 @@ type public TromboneTrack =
     abstract IsVisible: unit -> bool
 
 /// <summary>
+/// LoadedTromboneTrack extension for pause/resume functionality
+/// </summary>
+/// <remarks>
+/// Implementing this class allows you to react to the pause and resume 
+/// </remarks>
+type public PauseAware =
+    /// <summary>Can this track be resumed after a pause?</summary>
+    /// <remarks>If false, the curtains will close on pause.</remarks>
+    abstract CanResume: bool
+
+    /// Called when this track is paused. Use this to pause backgrounds or other features.
+    abstract OnPause: unit -> unit
+
+    /// Called when this track is resumed (after the countdown).
+    abstract OnResume: unit -> unit
+
+/// <summary>
 /// Event-based API for registering new tracks.
 /// </summary>
 /// <example>
