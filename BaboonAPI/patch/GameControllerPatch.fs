@@ -77,16 +77,16 @@ type private GameControllerExtension() =
     static member LoadChart(trackref: string): SavedLevel =
         (TrackAccessor.fetchTrack trackref).LoadChart()
         
-    static member PauseTrack() =
+    static member PauseTrack (controller: PauseCanvasController) =
         match loadedTrack with
         | Some (:? PauseAware as pa) ->
-            pa.OnPause()
+            pa.OnPause (PauseContext controller)
         | _ -> ()
 
-    static member ResumeTrack() =
+    static member ResumeTrack (controller: PauseCanvasController) =
         match loadedTrack with
         | Some (:? PauseAware as pa) ->
-            pa.OnResume()
+            pa.OnResume (PauseContext controller)
         | _ -> ()
 
     static member Unload() =
@@ -98,8 +98,6 @@ type private GameControllerExtension() =
 
 [<HarmonyPatch>]
 type GameControllerPatch() =
-    static let tracktitles_f = AccessTools.Field(typeof<GlobalVariables>, nameof GlobalVariables.data_tracktitles)
-
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<GameController>, "Start")>]
     static member TranspileStart(instructions: CodeInstruction seq) : CodeInstruction seq =
@@ -174,11 +172,11 @@ type PausePatches() =
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<PauseCanvasController>, "showPausePanel")>]
     static member PausePostfix(__instance: PauseCanvasController) =
-        GameControllerExtension.PauseTrack()
+        GameControllerExtension.PauseTrack __instance
         ()
     
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<PauseCanvasController>, "resumeFromPause")>]
     static member ResumePostfix(__instance: PauseCanvasController) =
-        GameControllerExtension.ResumeTrack()
+        GameControllerExtension.ResumeTrack __instance
         ()

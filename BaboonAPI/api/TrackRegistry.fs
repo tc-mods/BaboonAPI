@@ -60,6 +60,17 @@ type public TromboneTrack =
     /// Whether this track is visible in the track selector
     abstract IsVisible: unit -> bool
 
+/// Context for pausing & resuming
+type public PauseContext (controller: PauseCanvasController) =
+    /// Game controller for this track
+    member _.gameController = controller.gc
+
+    /// Background controller
+    member _.backgroundController = controller.gc.bgcontroller
+
+    /// Current full background object
+    member _.backgroundObj = controller.gc.bgcontroller.fullbgobject
+
 /// <summary>
 /// LoadedTromboneTrack extension for pause/resume functionality
 /// </summary>
@@ -72,10 +83,10 @@ type public PauseAware =
     abstract CanResume: bool
 
     /// Called when this track is paused. Use this to pause backgrounds or other features.
-    abstract OnPause: unit -> unit
+    abstract OnPause: PauseContext -> unit
 
     /// Called when this track is resumed (after the countdown).
-    abstract OnResume: unit -> unit
+    abstract OnResume: PauseContext -> unit
 
 /// <summary>
 /// Event-based API for registering new tracks.
