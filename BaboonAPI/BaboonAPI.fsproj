@@ -61,6 +61,7 @@
         <Compile Include="patch\SaverLoaderPatch.fs" />
         <Compile Include="patch\InitializerPatch.fs" />
         <Compile Include="patch\TrackScorePatch.fs" />
+        <Compile Include="patch\PreviewPatch.fs" />
         <Compile Include="api-post\TrackLookup.fs" />
         <Compile Include="api-post\Initializer.fs" />
         <Compile Include="Library.fs" />

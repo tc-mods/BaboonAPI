@@ -11,13 +11,13 @@ open UnityEngine
 ///  printf $"Loaded {assetBundle.name}"
 ///}</code>
 /// </remarks>
-type IYieldWithResult<'r> =
+type YieldTask<'r> =
     abstract Coroutine : YieldInstruction
     abstract Result : 'r
 
 /// Await an AsyncOperation
 let awaitAsyncOperation<'r, 'op when 'op :> AsyncOperation> (binder: 'op -> 'r) (op: 'op) =
-    { new IYieldWithResult<'r> with
+    { new YieldTask<'r> with
         member _.Coroutine = op
         member _.Result = binder op }
 
@@ -34,7 +34,7 @@ type CoroutineBuilder() =
 
     member _.YieldFrom (syi: YieldInstruction seq) = syi
 
-    member _.Bind (src: IYieldWithResult<'a>, binder: 'a -> YieldInstruction seq) =
+    member _.Bind (src: YieldTask<'a>, binder: 'a -> YieldInstruction seq) =
         seq {
             yield src.Coroutine // run the coroutine
             yield! binder(src.Result) // then call the binder with the result
@@ -58,3 +58,13 @@ type CoroutineBuilder() =
 
 /// Unity coroutine computation expression
 let coroutine = CoroutineBuilder()
+
+/// Transform a YieldTask
+let map (binder: 'a -> 'b) (task: YieldTask<'a>): YieldTask<'b> =
+    { new YieldTask<'b> with
+        member _.Coroutine = task.Coroutine
+        member _.Result = binder task.Result }
+
+/// Consume a YieldTask into an IEnumerator, allowing it to be started as a Unity coroutine
+let run (task: YieldTask<'a>) =
+    (Seq.delay (fun () -> Seq.singleton task.Coroutine)).GetEnumerator()

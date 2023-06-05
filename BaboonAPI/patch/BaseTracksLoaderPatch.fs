@@ -4,6 +4,8 @@ open System.IO
 open System.Runtime.Serialization.Formatters.Binary
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
+open BaboonAPI.Utility
+open BaboonAPI.Utility.Unity
 open BepInEx.Logging
 open HarmonyLib
 open UnityEngine
@@ -25,7 +27,7 @@ type internal BaseGameLoadedTrack(trackref: string, bundle: AssetBundle) =
             ()
 
         member this.trackref = trackref
-    
+
     interface PauseAware with
         member this.CanResume = true
 
@@ -62,6 +64,14 @@ type internal BaseGameTrack(data: string[]) =
             let path = $"{Application.streamingAssetsPath}/leveldata/{trackref}.tmb"
             use stream = File.Open(path, FileMode.Open)
             BinaryFormatter().Deserialize(stream) :?> SavedLevel
+
+    interface Previewable with
+        member this.LoadClip() =
+            let trackref = (this :> TromboneTrack).trackref
+            let path = $"{Application.streamingAssetsPath}/trackclips/{trackref}-sample.ogg"
+
+            loadAudioClip (path, AudioType.OGGVORBIS)
+            |> Coroutines.map (Result.map (fun audioClip -> { Clip = audioClip; Volume = 0.9f }))
 
 type internal BaseGameTrackRegistry(songs: SongData) =
     /// List of base game trackrefs

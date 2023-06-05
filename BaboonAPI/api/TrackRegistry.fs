@@ -2,6 +2,7 @@
 
 open System
 open BaboonAPI.Event
+open BaboonAPI.Utility.Coroutines
 open UnityEngine
 
 /// <namespacedoc>
@@ -87,6 +88,15 @@ type public PauseAware =
 
     /// Called when this track is resumed (after the countdown).
     abstract OnResume: PauseContext -> unit
+
+/// LoadedTromboneTrack extension for preview clips
+type public Previewable =
+    /// <summary>Called when attempting to load a clip for preview.</summary>
+    /// <remarks>
+    /// The implementation should return a valid audio clip on successful load.
+    /// The implementation may return a Error result with an error message if loading fails for any reason.
+    /// </remarks>
+    abstract LoadClip: unit -> YieldTask<Result<TrackAudio, string>>
 
 /// <summary>
 /// Event-based API for registering new tracks.

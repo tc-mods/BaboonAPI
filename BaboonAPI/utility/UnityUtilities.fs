@@ -15,12 +15,15 @@ let public loadAsset (name: string) (bundle: AssetBundle) =
     |> awaitAsyncOperation (fun op -> op.asset)
 
 let public loadAudioClip (path: string, audioType: AudioType) =
-    use www = UnityWebRequestMultimedia.GetAudioClip (path, audioType)
+    let www = UnityWebRequestMultimedia.GetAudioClip (path, audioType)
 
     let mapResult (op: UnityWebRequestAsyncOperation) =
-        if op.webRequest.isHttpError || op.webRequest.isNetworkError then
-            Error op.webRequest.error
-        else
-            Ok (DownloadHandlerAudioClip.GetContent op.webRequest)
+        try
+            if op.webRequest.isHttpError || op.webRequest.isNetworkError then
+                Error op.webRequest.error
+            else
+                Ok (DownloadHandlerAudioClip.GetContent op.webRequest)
+        finally
+            op.webRequest.Dispose()
 
     awaitAsyncOperation mapResult (www.SendWebRequest ())
