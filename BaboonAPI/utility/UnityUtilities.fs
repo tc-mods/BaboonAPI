@@ -16,6 +16,11 @@ let public loadAsset (name: string) (bundle: AssetBundle) =
 
 let public loadAudioClip (path: string, audioType: AudioType) =
     let www = UnityWebRequestMultimedia.GetAudioClip (path, audioType)
+    match www.downloadHandler with
+    | :? DownloadHandlerAudioClip as handler ->
+        handler.streamAudio <- true
+        handler.compressed <- false
+    | _ -> ()
 
     let mapResult (op: UnityWebRequestAsyncOperation) =
         try

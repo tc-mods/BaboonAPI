@@ -11,15 +11,34 @@ open UnityEngine
 ///  printf $"Loaded {assetBundle.name}"
 ///}</code>
 /// </remarks>
-type YieldTask<'r> =
-    abstract Coroutine : YieldInstruction
-    abstract Result : 'r
+type YieldTask<'r> internal (yi: YieldInstruction, supplier: unit -> 'r) =
+    member internal _.Coroutine = yi
+    member internal _.Result : 'r = supplier()
+
+    /// <summary>
+    /// Attach a callback to this YieldTask which will run with its result
+    /// </summary>
+    /// <remarks>
+    /// The returned IEnumerator must be yielded to Unity, otherwise the callback will never run.
+    /// </remarks>
+    /// <example>
+    /// Usage example within a coroutine callback:
+    /// <code lang="csharp">public IEnumerator Start()
+    ///{
+    ///    var task = Unity.loadAudioClip("sound.ogg", AudioType.OGGVORBIS);
+    ///    return task.ForEach(result => Debug.Log("Loaded clip!"));
+    ///}</code>
+    /// </example>
+    /// <param name="action">Consumer that will receive the task's result</param>
+    member public this.ForEach (action: Action<'r>) =
+        (seq {
+            yield this.Coroutine
+            action.Invoke this.Result
+        }).GetEnumerator()
 
 /// Await an AsyncOperation
 let awaitAsyncOperation<'r, 'op when 'op :> AsyncOperation> (binder: 'op -> 'r) (op: 'op) =
-    { new YieldTask<'r> with
-        member _.Coroutine = op
-        member _.Result = binder op }
+    YieldTask(op, fun () -> binder op)
 
 /// Await an AssetBundleCreateRequest, returning the loaded AssetBundle
 let public awaitAssetBundle : op: AssetBundleCreateRequest -> _ =
@@ -61,10 +80,18 @@ let coroutine = CoroutineBuilder()
 
 /// Transform a YieldTask
 let map (binder: 'a -> 'b) (task: YieldTask<'a>): YieldTask<'b> =
-    { new YieldTask<'b> with
-        member _.Coroutine = task.Coroutine
-        member _.Result = binder task.Result }
+    YieldTask(task.Coroutine, fun () -> binder task.Result)
 
 /// Consume a YieldTask into an IEnumerator, allowing it to be started as a Unity coroutine
-let run (task: YieldTask<'a>) =
-    (Seq.delay (fun () -> Seq.singleton task.Coroutine)).GetEnumerator()
+let run (task: YieldTask<unit>) =
+    (seq {
+        yield task.Coroutine
+        task.Result
+    }).GetEnumerator()
+
+/// <summary>Register a callback that is called after the YieldTask is run by Unity.</summary>
+/// <remarks>This function returns an IEnumerator that must be passed to Unity before the callback will run!</remarks>
+let each (runner: 'a -> unit) (task: YieldTask<'a>) =
+    task
+    |> map runner
+    |> run
