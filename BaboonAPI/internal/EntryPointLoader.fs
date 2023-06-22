@@ -16,25 +16,32 @@ exception InvalidEntryPoint of Type
 type PossibleConstructors =
     | NoneFound
     | ZeroArg of ConstructorInfo
-    | SingleArg of ConstructorInfo
+    | PluginInfoArg of ConstructorInfo
+    | PluginArg of ConstructorInfo
 
-let findConstructor (candidate: Type): PossibleConstructors =
-    let singleArg =
+let findConstructor (candidate: Type, pluginType: Type): PossibleConstructors =
+    let pluginArg =
+        Option.ofObj (candidate.GetConstructor [| pluginType |])
+        |> Option.map PluginArg
+    
+    let pluginInfoArg = (fun () ->
         Option.ofObj (candidate.GetConstructor [| typeof<PluginInfo> |])
-        |> Option.map SingleArg
+        |> Option.map PluginInfoArg)
 
     let zeroArg = (fun () ->
         Option.ofObj (candidate.GetConstructor [||])
         |> Option.map ZeroArg)
 
-    singleArg
+    pluginArg
+    |> Option.orElseWith pluginInfoArg
     |> Option.orElseWith zeroArg
     |> Option.defaultValue NoneFound
 
 /// Scan a plugin for hook subclasses
 let scan<'t> (plugin: PluginInfo): 't EntryPointContainer list =
     let target = typeof<'t>
-    let assembly = plugin.Instance.GetType().Assembly
+    let pluginType = plugin.Instance.GetType()
+    let assembly = pluginType.Assembly
 
     let candidates =
         assembly.GetTypes()
@@ -42,11 +49,13 @@ let scan<'t> (plugin: PluginInfo): 't EntryPointContainer list =
         |> Seq.filter (getCustomAttribute<BaboonEntryPointAttribute> >> Option.isSome)
 
     let construct (candidate: Type) =
-        let constructor = findConstructor candidate
+        let constructor = findConstructor (candidate, pluginType)
 
         let inst =
             match constructor with
-            | SingleArg cons ->
+            | PluginArg cons ->
+                cons.Invoke [| plugin.Instance |]
+            | PluginInfoArg cons ->
                 cons.Invoke [| plugin |]
             | ZeroArg cons ->
                 cons.Invoke [||]
