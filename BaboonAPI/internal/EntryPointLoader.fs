@@ -1,17 +1,18 @@
-﻿module BaboonAPI.Internal.EntryPointScanner
+﻿module internal BaboonAPI.Internal.EntryPointScanner
 
 open System
 open System.Reflection
 open BaboonAPI.Hooks.Entrypoints
 open BepInEx
 open BepInEx.Bootstrap
+open BepInEx.Logging
+
+let logger = Logger.CreateLogSource "BaboonAPI.EntryPointScanner"
 
 let getCustomAttribute<'t when 't :> Attribute> (target: Type): 't option =
     match box (target.GetCustomAttribute<'t>()) with
     | null -> None
     | x -> Some (unbox x)
-
-exception InvalidEntryPoint of Type
 
 type PossibleConstructors =
     | NoneFound
@@ -60,7 +61,7 @@ let scan<'t> (plugin: PluginInfo): 't EntryPointContainer list =
             | ZeroArg cons ->
                 cons.Invoke [||]
             | NoneFound ->
-                raise (InvalidEntryPoint candidate)
+                logger.LogWarning $"Invalid entrypoint {candidate.FullName}: no valid constructor"
 
         { Source = plugin
           Instance = unbox<'t> inst }
