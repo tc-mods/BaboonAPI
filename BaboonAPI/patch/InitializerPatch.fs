@@ -125,3 +125,10 @@ type BrandingPatch() =
         |> __instance.StartCoroutine
         |> ignore
         ()
+
+    [<HarmonyPatch("killandload")>]
+    [<HarmonyPrefix>]
+    static member KillPrefix () =
+        // If initialization fails, don't run killandload
+        // Extra safeguard against mods calling killandload or base game changes
+        ModInitializer.IsInitialized()
