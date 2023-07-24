@@ -52,8 +52,10 @@
         <Compile Include="api\TrackRegistry.fs" />
         <Compile Include="api\CustomSaveData.fs" />
         <Compile Include="api\Initializer.fs" />
+        <Compile Include="api\Entrypoints.fs" />
         <Compile Include="internal\TrackAccessor.fs" />
         <Compile Include="internal\ScoreStorage.fs" />
+        <Compile Include="internal\EntryPointLoader.fs" />
         <Compile Include="patch\TrackCountPatches.fs" />
         <Compile Include="patch\TrackrefPatches.fs" />
         <Compile Include="patch\BaseTracksLoaderPatch.fs" />
@@ -64,6 +66,7 @@
         <Compile Include="patch\PreviewPatch.fs" />
         <Compile Include="api-post\TrackLookup.fs" />
         <Compile Include="api-post\Initializer.fs" />
+        <Compile Include="api-post\Entrypoints.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>
 
