@@ -24,7 +24,7 @@ let findConstructor (candidate: Type, pluginType: Type): PossibleConstructors =
     let pluginArg =
         Option.ofObj (candidate.GetConstructor [| pluginType |])
         |> Option.map PluginArg
-    
+
     let pluginInfoArg = (fun () ->
         Option.ofObj (candidate.GetConstructor [| typeof<PluginInfo> |])
         |> Option.map PluginInfoArg)
@@ -55,18 +55,21 @@ let scan<'t> (plugin: PluginInfo): 't EntryPointContainer list =
         let inst =
             match constructor with
             | PluginArg cons ->
-                cons.Invoke [| plugin.Instance |]
+                Some (cons.Invoke [| plugin.Instance |])
             | PluginInfoArg cons ->
-                cons.Invoke [| plugin |]
+                Some (cons.Invoke [| plugin |])
             | ZeroArg cons ->
-                cons.Invoke [||]
+                Some (cons.Invoke [||])
             | NoneFound ->
                 logger.LogWarning $"Invalid entrypoint {candidate.FullName}: no valid constructor"
+                None
 
-        { Source = plugin
-          Instance = unbox<'t> inst }
+        inst
+        |> Option.map (fun instance ->
+            { Source = plugin; Instance = unbox<'t> instance })
 
     Seq.map construct candidates
+    |> Seq.choose id
     |> Seq.toList
 
 /// Scan all plugins for hook subclasses
