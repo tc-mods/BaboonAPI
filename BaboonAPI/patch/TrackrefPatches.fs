@@ -1,11 +1,21 @@
 ﻿namespace BaboonAPI.Patch
 
-open System.Collections.Generic
 open System.Reflection.Emit
 open BaboonAPI.Internal
 open BepInEx.Logging
 open HarmonyLib
 open UnityEngine
+
+type private LevelSelectReloadBehaviour() =
+    inherit MonoBehaviour()
+
+    member _.Start () =
+        Debug.Log "Register reload here"
+        ()
+
+    member _.OnDestroy () =
+        Debug.Log "Unregister reload here"
+        ()
 
 type private TrackrefAccessor() =
     static let logger = Logger.CreateLogSource "BaboonAPI.TrackrefAccessor"
@@ -24,16 +34,13 @@ type private TrackrefAccessor() =
     static member fetchChosenTrack trackref =
         (TrackAccessor.fetchRegisteredTrack trackref).asTrackData
 
-    static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: List<SingleTrackData>) =
-        try
-            TrackAccessor.allTracks()
-            |> Seq.filter (fun s -> s.track.IsVisible())
-            |> Seq.map (fun s -> s.asTrackData)
-            |> alltrackslist.AddRange
-        with
-        | TrackAccessor.DuplicateTrackrefException trackref ->
-            // TODO: Show an error popup in game? The game doesn't have anything for this...
-            logger.LogFatal $"Duplicate trackref {trackref}, songs not loading!"
+    static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: ResizeArray<SingleTrackData>) =
+        instance.gameObject.AddComponent<LevelSelectReloadBehaviour>() |> ignore
+
+        TrackAccessor.allTracks()
+        |> Seq.filter (fun s -> s.track.IsVisible())
+        |> Seq.map (fun s -> s.asTrackData)
+        |> alltrackslist.AddRange
 
     static member populateSongGraphs () =
         Array.init (TrackAccessor.trackCount()) makeSongGraph
@@ -77,7 +84,7 @@ type TrackTitlePatches() =
                 CodeInstruction OpCodes.Ldarg_0
                 CodeInstruction.LoadField(typeof<LevelSelectController>, "alltrackslist")
                 CodeInstruction.Call(typeof<TrackrefAccessor>, "doLevelSelectStart",
-                               [| typeof<LevelSelectController>; typeof<List<SingleTrackData>> |])
+                               [| typeof<LevelSelectController>; typeof<ResizeArray<SingleTrackData>> |])
 
                 // populate song graphs
                 CodeInstruction OpCodes.Ldarg_0

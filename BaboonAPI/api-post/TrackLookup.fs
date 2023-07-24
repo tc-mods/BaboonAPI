@@ -23,6 +23,10 @@ let public allTracks (): TromboneTrack list =
     |> Seq.map (fun rt -> rt.track)
     |> Seq.toList
 
+/// Reload the list of tracks
+let public reload () =
+    TrackAccessor.load()
+
 /// Highest rank & most recent 5 high scores for a track
 type public SavedTrackScore =
     { highestRank: string

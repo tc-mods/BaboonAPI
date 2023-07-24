@@ -76,7 +76,7 @@ type public PauseContext (controller: PauseCanvasController) =
 /// LoadedTromboneTrack extension for pause/resume functionality
 /// </summary>
 /// <remarks>
-/// Implementing this class allows you to react to the pause and resume 
+/// Implementing this class allows you to react to the pause and resume
 /// </remarks>
 type public PauseAware =
     /// <summary>Can this track be resumed after a pause?</summary>
@@ -120,3 +120,17 @@ module TrackRegistrationEvent =
             { new Listener with
                 member _.OnRegisterTracks () =
                     listeners |> Seq.collect (fun l -> l.OnRegisterTracks()) })
+
+/// Event fired whenever tracks have finished loading.
+module TracksLoadedEvent =
+    /// Event listener type
+    type public Listener =
+        /// Called when tracks have finished loading.
+        abstract OnTracksLoaded: TromboneTrack list -> unit
+
+    /// Event bus
+    let EVENT =
+        EventFactory.create (fun listeners ->
+            { new Listener with
+                member _.OnTracksLoaded tracks =
+                    listeners |> Seq.iter (fun l -> l.OnTracksLoaded tracks) })

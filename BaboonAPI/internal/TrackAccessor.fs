@@ -34,37 +34,48 @@ let private checkForDuplicates (tracks: seq<string * RegisteredTrack>): seq<stri
             raise (DuplicateTrackrefException trackref)
 }
 
-let private tracks =
-    lazy
-        TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
-        |> Seq.indexed
-        |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
-        |> checkForDuplicates
-        |> Map.ofSeq
+type TrackLoader() =
+    let mutable tracks = Map.empty
+    let mutable tracksByIndex = []
 
-let private tracksByIndex =
-    lazy
-        let unsorted =
-            tracks.Value.Values |> List.ofSeq
+    member _.LoadTracks() =
+        tracks <-
+            TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
+            |> Seq.indexed
+            |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
+            |> checkForDuplicates
+            |> Map.ofSeq
 
-        unsorted
-        |> List.permute (fun i -> unsorted[i].trackIndex)
+        let unsorted = tracks.Values |> List.ofSeq
+        tracksByIndex <- unsorted |> List.permute (fun i -> unsorted[i].trackIndex)
 
-let fetchTrackByIndex (id: int) : TromboneTrack = tracksByIndex.Value[id].track
+        let allTracks = tracks.Values |> Seq.map (fun rt -> rt.track) |> Seq.toList
+        TracksLoadedEvent.EVENT.invoker.OnTracksLoaded allTracks
 
-let fetchTrack (ref: string) = tracks.Value[ref].track
+    member _.Tracks = tracks
+    member _.TracksByIndex = tracksByIndex
 
-let fetchRegisteredTrack (ref: string) = tracks.Value[ref]
+    member _.lookup (trackref: string) = tracks[trackref]
 
-let tryFetchRegisteredTrack (ref: string) = Map.tryFind ref tracks.Value
+    member _.tryLookup (trackref: string) = Map.tryFind trackref tracks
 
-let fetchTrackIndex (ref: string) = tracks.Value[ref].trackIndex
+let private trackLoader = TrackLoader()
 
-let trackCount () = tracksByIndex.Value.Length
+let fetchTrackByIndex (id: int) : TromboneTrack = trackLoader.TracksByIndex[id].track
 
-let allTracks () = tracksByIndex.Value |> Seq.ofList
+let fetchTrack (ref: string) = trackLoader.lookup(ref).track
+
+let fetchRegisteredTrack (ref: string) = trackLoader.lookup ref
+
+let tryFetchRegisteredTrack (ref: string) = trackLoader.tryLookup ref
+
+let fetchTrackIndex (ref: string) = trackLoader.lookup(ref).trackIndex
+
+let trackCount () = trackLoader.Tracks.Count
+
+let allTracks () = trackLoader.TracksByIndex |> Seq.ofList
 
 let toTrackData (track: TromboneTrack) = makeTrackData track (fetchTrackIndex track.trackref)
 
 let load () =
-    tracks.Value |> ignore
+    trackLoader.LoadTracks()
