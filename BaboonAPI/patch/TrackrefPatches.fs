@@ -1,21 +1,51 @@
 ﻿namespace BaboonAPI.Patch
 
 open System.Reflection.Emit
+open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
 open BepInEx.Logging
 open HarmonyLib
 open UnityEngine
 
+type private LevelSelectContext =
+    { controller: LevelSelectController
+      allTracksList: SingleTrackData ResizeArray }
+
 type private LevelSelectReloadBehaviour() =
     inherit MonoBehaviour()
+    
+    static let songindex_f = AccessTools.Field(typeof<LevelSelectController>, "songindex")
+    static let populate_names_m = AccessTools.Method(typeof<LevelSelectController>, "populateSongNames")
+    
+    // Unity sucks etc etc 
+    let mutable context = None
+    
+    member _.Init (controller: LevelSelectController, alltrackslist: ResizeArray<SingleTrackData>) =
+        context <- Some { controller = controller; allTracksList = alltrackslist }
 
-    member _.Start () =
-        Debug.Log "Register reload here"
+    member this.Start () =
+        TracksLoadedEvent.EVENT.Register this
         ()
 
-    member _.OnDestroy () =
-        Debug.Log "Unregister reload here"
+    member this.OnDestroy () =
+        TracksLoadedEvent.EVENT.Unregister this
         ()
+    
+    interface TracksLoadedEvent.Listener with
+        member this.OnTracksLoaded _ =
+            match context with
+            | Some ctx ->
+                ctx.allTracksList.Clear()
+
+                TrackAccessor.allTracks()
+                |> Seq.filter (fun s -> s.track.IsVisible())
+                |> Seq.map (fun s -> s.asTrackData)
+                |> ctx.allTracksList.AddRange
+
+                songindex_f.SetValue (ctx.controller, 0)
+                populate_names_m.Invoke (ctx.controller, [| false |]) |> ignore
+                ()
+            | _ -> ()
 
 type private TrackrefAccessor() =
     static let logger = Logger.CreateLogSource "BaboonAPI.TrackrefAccessor"
@@ -35,7 +65,7 @@ type private TrackrefAccessor() =
         (TrackAccessor.fetchRegisteredTrack trackref).asTrackData
 
     static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: ResizeArray<SingleTrackData>) =
-        instance.gameObject.AddComponent<LevelSelectReloadBehaviour>() |> ignore
+        instance.gameObject.AddComponent<LevelSelectReloadBehaviour>().Init(instance, alltrackslist)
 
         TrackAccessor.allTracks()
         |> Seq.filter (fun s -> s.track.IsVisible())
