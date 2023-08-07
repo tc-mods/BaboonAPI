@@ -89,7 +89,7 @@ type public PauseAware =
     /// Called when this track is resumed (after the countdown).
     abstract OnResume: PauseContext -> unit
 
-/// LoadedTromboneTrack extension for preview clips
+/// TromboneTrack extension for preview clips
 type public Previewable =
     /// <summary>Called when attempting to load a clip for preview.</summary>
     /// <remarks>
@@ -97,6 +97,28 @@ type public Previewable =
     /// The implementation may return a Error result with an error message if loading fails for any reason.
     /// </remarks>
     abstract LoadClip: unit -> YieldTask<Result<TrackAudio, string>>
+
+/// Represents a song graph
+type public SongGraph =
+    { fury: int
+      tears: int
+      spunk: int
+      doots: int
+      slides: int }
+
+    /// <summary>Create a graph with all values set to <paramref name="value" /></summary>
+    static member all (value: int) =
+        { fury = value; tears = value; spunk = value; doots = value; slides = value; }
+
+    /// Get the graph as a 5-tuple of integers for passing back to the game
+    member public this.asArray =
+        [| this.fury; this.tears; this.spunk; this.doots; this.slides |]
+
+/// TromboneTrack extension for drawing song graphs on the track select screen
+type public Graphable =
+    /// <summary>Draw a song graph for this track</summary>
+    /// <remarks>Implementations should return None if they don't have a graph</remarks>
+    abstract CreateGraph: unit -> SongGraph option
 
 /// <summary>
 /// Event-based API for registering new tracks.

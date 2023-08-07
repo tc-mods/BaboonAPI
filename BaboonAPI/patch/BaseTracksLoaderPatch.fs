@@ -73,6 +73,13 @@ type internal BaseGameTrack(data: string[]) =
             loadAudioClip (path, AudioType.OGGVORBIS)
             |> Coroutines.map (Result.map (fun audioClip -> { Clip = audioClip; Volume = 0.9f }))
 
+    interface Graphable with
+        member this.CreateGraph() =
+            match (this :> TromboneTrack).trackref with
+            | "warmup" -> Some (SongGraph.all 10)
+            | "einefinal" -> Some (SongGraph.all 104)
+            | _ -> None
+
 type internal BaseGameTrackRegistry(songs: SongData) =
     /// List of base game trackrefs
     member _.trackrefs =

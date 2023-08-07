@@ -51,8 +51,21 @@ type private LevelSelectReloadBehaviour() =
 type private TrackrefAccessor() =
     static let logger = Logger.CreateLogSource "BaboonAPI.TrackrefAccessor"
 
-    static let makeSongGraph _ =
-        Array.init 5 (fun _ -> Random.Range (0, 100))
+    static let makeSongGraph (rt: TrackAccessor.RegisteredTrack) =
+        let generate _ =
+            Mathf.Clamp(rt.track.difficulty * 10 + Random.Range (-25, 5), 10, 104)
+
+        let graph =
+            match rt.track with
+            | :? Graphable as graphable ->
+                graphable.CreateGraph()
+            | _ -> None
+
+        match graph with
+        | Some g ->
+            g.asArray
+        | None ->
+            Array.init 5 generate
 
     static member finalLevelIndex () = TrackAccessor.fetchTrackIndex "einefinal"
 
@@ -74,7 +87,9 @@ type private TrackrefAccessor() =
         |> alltrackslist.AddRange
 
     static member populateSongGraphs () =
-        Array.init (TrackAccessor.trackCount()) makeSongGraph
+        TrackAccessor.allTracks()
+        |> Seq.map makeSongGraph
+        |> Array.ofSeq
 
 [<HarmonyPatch(typeof<SaverLoader>, "loadTrackData")>]
 type TrackLoaderPatch() =
