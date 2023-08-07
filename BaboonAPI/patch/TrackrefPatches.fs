@@ -1,5 +1,6 @@
 ﻿namespace BaboonAPI.Patch
 
+open System
 open System.Reflection.Emit
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
@@ -13,13 +14,13 @@ type private LevelSelectContext =
 
 type private LevelSelectReloadBehaviour() =
     inherit MonoBehaviour()
-    
+
     static let songindex_f = AccessTools.Field(typeof<LevelSelectController>, "songindex")
     static let populate_names_m = AccessTools.Method(typeof<LevelSelectController>, "populateSongNames")
-    
-    // Unity sucks etc etc 
+
+    // Unity sucks etc etc
     let mutable context = None
-    
+
     member _.Init (controller: LevelSelectController, alltrackslist: ResizeArray<SingleTrackData>) =
         context <- Some { controller = controller; allTracksList = alltrackslist }
 
@@ -30,7 +31,7 @@ type private LevelSelectReloadBehaviour() =
     member this.OnDestroy () =
         TracksLoadedEvent.EVENT.Unregister this
         ()
-    
+
     interface TracksLoadedEvent.Listener with
         member this.OnTracksLoaded _ =
             match context with
@@ -92,23 +93,30 @@ type TrackTitlePatches() =
     static member Transpiler(instructions: CodeInstruction seq): CodeInstruction seq =
         let matcher =
             CodeMatcher(instructions)
-                .MatchForward(false, [|
-                    CodeMatch (fun ins -> ins.LoadsConstant(0L))
-                    CodeMatch OpCodes.Stloc_3
+                .MatchForward(true, [|
+                    CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
+                    CodeMatch OpCodes.Ldlen
+                    CodeMatch ()
+                    CodeMatch (fun ins -> ins.Branches () |> fst)
                 |])
-                .ThrowIfInvalid("Could not find start of injection point in LevelSelectController#Start")
+                .ThrowIfInvalid("Could not find end of injection point in LevelSelectController#Start")
 
-        let start = matcher.Pos
+        let endPos = matcher.Pos
+        let branch =
+            match matcher.Instruction.Branches() with
+            | true, b -> b.Value
+            | false, _ -> raise (InvalidOperationException "Could not find branching instruction of for loop in LevelSelectController#Start")
+
+        let startPos =
+            matcher
+                .SearchBack(fun ins -> ins.labels.Contains branch)
+                .ThrowIfInvalid("Could not find start of injection point in LevelSelectController#Start")
+                .Pos - 3
 
         matcher
-            .MatchForward(true, [|
-                CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
-                CodeMatch OpCodes.Ldlen
-            |])
-            .ThrowIfInvalid("Could not find end of injection point in LevelSelectController#Start")
-            .RemoveInstructionsInRange(start, matcher.Pos + 2) // Remove the for loop
+            .RemoveInstructionsInRange(startPos, endPos) // Remove the for loop
             .Start()
-            .Advance(start) // Go to where the for loop used to be
+            .Advance(startPos) // Go to where the for loop used to be
             .InsertAndAdvance([|
                 CodeInstruction OpCodes.Ldarg_0
                 CodeInstruction OpCodes.Ldarg_0
