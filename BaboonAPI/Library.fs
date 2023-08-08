@@ -36,11 +36,13 @@ type BaboonPlugin() =
 
     interface GameInitializationEvent.Listener with
         member this.Initialize() =
-            this.Logger.LogInfo "Unlocking the secrets of the baboon..."
-            Debug.printDebug this.Logger
+            let logger = this.Logger
+            logger.LogInfo "Unlocking the secrets of the baboon..."
 
-            // Apply the rest of the patches
             GameInitializationEvent.attempt this.Info (fun () ->
+                Debug.printDebug logger
+
+                // Apply the rest of the patches
                 [
                     typeof<TrackCountPatches>
                     typeof<TrackLoaderPatch>
