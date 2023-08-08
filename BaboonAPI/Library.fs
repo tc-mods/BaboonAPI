@@ -37,6 +37,7 @@ type BaboonPlugin() =
     interface GameInitializationEvent.Listener with
         member this.Initialize() =
             this.Logger.LogInfo "Unlocking the secrets of the baboon..."
+            Debug.printDebug this.Logger
 
             // Apply the rest of the patches
             GameInitializationEvent.attempt this.Info (fun () ->
