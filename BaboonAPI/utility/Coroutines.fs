@@ -67,6 +67,14 @@ type CoroutineBuilder() =
                 expr.Dispose()
         }
 
+    member _.For (expr: 'a seq, binder: 'a -> YieldInstruction seq) = Seq.collect binder expr
+
+    member _.While (predicate: unit -> bool, body: YieldInstruction seq) =
+        seq {
+            while predicate() do
+                yield! body
+        }
+
     member _.Combine (a: YieldInstruction seq, b: YieldInstruction seq) = Seq.append a b
 
     member _.Delay (binder: unit -> YieldInstruction seq) = Seq.delay binder
