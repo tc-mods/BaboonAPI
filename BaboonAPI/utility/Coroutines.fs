@@ -37,6 +37,13 @@ type YieldTask<'r> internal (yi: YieldInstruction, supplier: unit -> 'r) =
             action.Invoke this.Result
         }).GetEnumerator()
 
+    /// <summary>
+    /// Project the result of this YieldTask into a new form
+    /// </summary>
+    /// <param name="selector">A transformation function to apply to the result of this task</param>
+    member public this.Select (selector: Func<'r, 'u>) =
+        YieldTask (this.Coroutine, fun () -> selector.Invoke this.Result)
+
 /// Await an AsyncOperation
 let awaitAsyncOperation<'r, 'op when 'op :> AsyncOperation> (binder: 'op -> 'r) (op: 'op) =
     YieldTask(op, fun () -> binder op)
