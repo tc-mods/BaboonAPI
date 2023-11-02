@@ -2,6 +2,7 @@
 
 open System.Collections.Generic
 open BaboonAPI.Hooks.Tracks
+open BaboonAPI.Utility.Coroutines
 
 exception DuplicateTrackrefException of string
 
@@ -38,19 +39,42 @@ type TrackLoader() =
     let mutable tracks = Map.empty
     let mutable tracksByIndex = []
 
-    member _.LoadTracks() =
-        tracks <-
-            TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
+    let makeTrackLoader () =
+        TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
             |> Seq.indexed
             |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
             |> checkForDuplicates
-            |> Map.ofSeq
+
+    member _.LoadTracks() =
+        tracks <- makeTrackLoader() |> Map.ofSeq
 
         let unsorted = tracks.Values |> List.ofSeq
         tracksByIndex <- unsorted |> List.permute (fun i -> unsorted[i].trackIndex)
 
         let allTracks = tracks.Values |> Seq.map (fun rt -> rt.track) |> Seq.toList
         TracksLoadedEvent.EVENT.invoker.OnTracksLoaded allTracks
+
+    member _.LoadTracksAsync () =
+        let onComplete output =
+            tracks <- output
+            let unsorted = tracks.Values |> List.ofSeq
+            tracksByIndex <- unsorted |> List.permute (fun i -> unsorted[i].trackIndex)
+
+            let allTracks = tracks.Values |> Seq.map (fun rt -> rt.track) |> Seq.toList
+            TracksLoadedEvent.EVENT.invoker.OnTracksLoaded allTracks
+
+        coroutine {
+            let task = Async.StartAsTask (async {
+                return makeTrackLoader() |> Map.ofSeq
+            })
+
+            yield WaitForTask(task)
+
+            if task.IsCompletedSuccessfully then
+                onComplete task.Result
+            else if task.IsFaulted then
+                raise task.Exception
+        }
 
     member _.Tracks = tracks
     member _.TracksByIndex = tracksByIndex
@@ -79,3 +103,6 @@ let toTrackData (track: TromboneTrack) = makeTrackData track (fetchTrackIndex tr
 
 let load () =
     trackLoader.LoadTracks()
+
+let loadAsync () =
+    trackLoader.LoadTracksAsync()

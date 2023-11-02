@@ -27,6 +27,11 @@ let public allTracks (): TromboneTrack list =
 let public reload () =
     TrackAccessor.load()
 
+/// <summary>Reload the list of tracks asynchronously.</summary>
+/// <returns>A Unity coroutine that must be started using StartCoroutine.</returns>
+let public reloadAsync () =
+    TrackAccessor.loadAsync()
+
 /// Highest rank & most recent 5 high scores for a track
 type public SavedTrackScore =
     { highestRank: string

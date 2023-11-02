@@ -21,6 +21,10 @@ type BaboonPlugin() =
         // Apply the initializer patchset
         harmony.PatchAll(typeof<BrandingPatch>)
 
+    member this.TestReload () =
+        TrackAccessor.loadAsync()
+        |> this.StartCoroutine
+
     member this.TryLoadTracks() =
         try
             TrackAccessor.load()

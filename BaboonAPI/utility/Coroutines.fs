@@ -1,6 +1,7 @@
 ﻿module BaboonAPI.Utility.Coroutines
 
 open System
+open System.Threading.Tasks
 open UnityEngine
 
 /// <summary>Async operation type</summary>
@@ -50,6 +51,11 @@ let public awaitResource : op: ResourceRequest -> _ =
 
 type CoroutineBuilder() =
     member _.Yield (yi: YieldInstruction) = Seq.singleton yi
+    member _.Yield (yi: CustomYieldInstruction) =
+        seq {
+            while yi.keepWaiting do
+                yield yi.Current :?> YieldInstruction
+        }
 
     member _.YieldFrom (syi: YieldInstruction seq) = syi
 
@@ -103,3 +109,9 @@ let each (runner: 'a -> unit) (task: YieldTask<'a>) =
     task
     |> map runner
     |> run
+
+/// Suspends the coroutine until the given .NET task completes
+type WaitForTask<'a> (task: Task<'a>) =
+    inherit CustomYieldInstruction()
+
+    override this.keepWaiting = not task.IsCompleted
