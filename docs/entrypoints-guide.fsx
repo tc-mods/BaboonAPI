@@ -157,4 +157,14 @@ referencing and calling into your mod's types.
 
 Similarly, you should make sure you're not passing types that only exist in the library mod to other parts of your code.
 All references to the library mod's types should be contained within your entrypoint.
+
+## Valid entrypoint constructors
+
+Entrypoints can have one of three types of constructors:
+
+- zero arguments
+- single argument of your mod's plugin type (the type annotated with `BepInPlugin`)
+- single argument of type `PluginInfo` (from BepInEx)
+
+Any other constructor form will cause your entrypoint to be skipped.
 *)
