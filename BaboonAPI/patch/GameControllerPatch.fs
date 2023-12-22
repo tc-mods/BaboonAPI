@@ -41,7 +41,7 @@ type private GameControllerExtension() =
         if not instance.freeplay then
             let audio = l.LoadAudio()
             instance.musictrack.clip <- audio.Clip
-            instance.musictrack.volume <- audio.Volume
+            instance.musictrack.volume <- audio.Volume * GlobalVariables.localsettings.maxvolume_music
 
         let context = BackgroundContext instance
         let bgObj = Object.Instantiate<GameObject>(

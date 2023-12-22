@@ -74,7 +74,7 @@
     <ItemGroup>
         <PackageReference Include="BepInEx.Core" Version="5.*" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-        <PackageReference Include="TromboneChamp.GameLibs" Version="1.13.0-beta" />
+        <PackageReference Include="TromboneChamp.GameLibs" Version="1.18.0" />
     </ItemGroup>
 
     <ItemGroup>
