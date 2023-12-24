@@ -2,7 +2,7 @@
 
 Contributor: Henry Le Grys <obw@generalprogramming.org>
 
-Source Code: https://gitlab.com/hedgehog1029/baboonapi/
+Source Code: https://github.com/tc-mods/BaboonAPI
 
 ## Purpose
 
