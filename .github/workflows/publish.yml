@@ -15,5 +15,5 @@ jobs:
           dotnet-version: '6.0'
       - run: dotnet tool install -g tcli
       - run: dotnet build -c Release
-      - run: dotnet nuget push bin/Release/*.nupkg -k ${{ secrets.NUGET_KEY }} -s https://api.nuget.org/v3/index.json
-      - run: tcli publish --file bin/Release/net472/BaboonAPI-thunderstore.zip --token ${{ secrets.THUNDERSTORE_TOKEN }}
+      - run: dotnet nuget push BaboonAPI/bin/Release/*.nupkg -k ${{ secrets.NUGET_KEY }} -s https://api.nuget.org/v3/index.json
+      - run: tcli publish --file BaboonAPI/bin/Release/net472/BaboonAPI-thunderstore.zip --token ${{ secrets.THUNDERSTORE_TOKEN }}
