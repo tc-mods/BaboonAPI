@@ -57,6 +57,7 @@
         <Compile Include="internal\ScoreStorage.fs" />
         <Compile Include="internal\EntryPointLoader.fs" />
         <Compile Include="internal\Debug.fs" />
+        <Compile Include="internal\BaseGame.fs" />
         <Compile Include="patch\TrackCountPatches.fs" />
         <Compile Include="patch\TrackrefPatches.fs" />
         <Compile Include="patch\BaseTracksLoaderPatch.fs" />
