@@ -43,6 +43,9 @@ type private GameControllerExtension() =
             instance.musictrack.clip <- audio.Clip
             instance.musictrack.volume <- audio.Volume * GlobalVariables.localsettings.maxvolume_music
 
+            if GlobalVariables.turbomode then
+                instance.musictrack.pitch <- 2f
+
         let context = BackgroundContext instance
         let bgObj = Object.Instantiate<GameObject>(
             l.LoadBackground context, Vector3.zero, Quaternion.identity, instance.bgholder.transform)
@@ -72,7 +75,11 @@ type private GameControllerExtension() =
 
         loadedTrack <- Some l
 
-        ()
+        // Return smooth_scrolling_move_mult
+        if GlobalVariables.turbomode then
+            2f
+        else
+            GlobalVariables.practicemode
 
     static member LoadChart(trackref: string): SavedLevel =
         (TrackAccessor.fetchTrack trackref).LoadChart()
@@ -131,7 +138,9 @@ type GameControllerPatch() =
             .Advance(startIndex)
             .Insert([|
                 CodeInstruction OpCodes.Ldarg_0
+                CodeInstruction OpCodes.Ldarg_0
                 CodeInstruction.Call(typeof<GameControllerExtension>, "Infix")
+                CodeInstruction.StoreField (typeof<GameController>, "smooth_scrolling_move_mult")
             |])
             .AddLabels(startLabels) // re-apply start labels
             .InstructionEnumeration()
