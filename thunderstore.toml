@@ -1,0 +1,14 @@
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "TromboneChamps"
+name = "BaboonAPI"
+description = "Trombone Champ modding API"
+websiteUrl = "https://baboonapi.trombone.wiki"
+containsNsfwContent = false
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "trombone-champ", ]
+categories = [ "libraries" ]

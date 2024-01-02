@@ -2,6 +2,7 @@
 
 open System.Collections.Generic
 open BaboonAPI.Hooks.Tracks
+open BaboonAPI.Utility.Coroutines
 
 exception DuplicateTrackrefException of string
 
@@ -36,21 +37,39 @@ let private checkForDuplicates (tracks: seq<string * RegisteredTrack>): seq<stri
 
 type TrackLoader() =
     let mutable tracks = Map.empty
-    let mutable tracksByIndex = []
+    let mutable tracksByIndex = Array.empty
 
-    member _.LoadTracks() =
-        tracks <-
-            TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
+    let makeTrackLoader () =
+        TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
             |> Seq.indexed
             |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
             |> checkForDuplicates
-            |> Map.ofSeq
 
-        let unsorted = tracks.Values |> List.ofSeq
-        tracksByIndex <- unsorted |> List.permute (fun i -> unsorted[i].trackIndex)
+    let onTracksLoaded (loaded: seq<string * RegisteredTrack>) =
+        // Our track sequence is already sorted - trackIndex is set above ^
+        let sortedTracks = loaded |> Seq.toArray
+        tracks <- Map.ofArray sortedTracks
+        tracksByIndex <- sortedTracks |> Array.map snd
 
-        let allTracks = tracks.Values |> Seq.map (fun rt -> rt.track) |> Seq.toList
+        let allTracks = tracksByIndex |> Seq.map (fun rt -> rt.track) |> Seq.toList
         TracksLoadedEvent.EVENT.invoker.OnTracksLoaded allTracks
+
+    member _.LoadTracks() =
+        makeTrackLoader() |> onTracksLoaded
+
+    member _.LoadTracksAsync () =
+        coroutine {
+            let task = Async.StartAsTask (async {
+                return makeTrackLoader()
+            })
+
+            yield WaitForTask(task)
+
+            if task.IsCompletedSuccessfully then
+                onTracksLoaded task.Result
+            else if task.IsFaulted then
+                raise task.Exception
+        }
 
     member _.Tracks = tracks
     member _.TracksByIndex = tracksByIndex
@@ -73,9 +92,12 @@ let fetchTrackIndex (ref: string) = trackLoader.lookup(ref).trackIndex
 
 let trackCount () = trackLoader.Tracks.Count
 
-let allTracks () = trackLoader.TracksByIndex |> Seq.ofList
+let allTracks () = trackLoader.TracksByIndex |> Seq.ofArray
 
 let toTrackData (track: TromboneTrack) = makeTrackData track (fetchTrackIndex track.trackref)
 
 let load () =
     trackLoader.LoadTracks()
+
+let loadAsync () =
+    trackLoader.LoadTracksAsync()

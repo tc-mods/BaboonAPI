@@ -44,8 +44,15 @@ let scan<'t> (plugin: PluginInfo): 't EntryPointContainer list =
     let pluginType = plugin.Instance.GetType()
     let assembly = pluginType.Assembly
 
+    let types =
+        try
+            assembly.GetTypes()
+        with
+        | :? ReflectionTypeLoadException as exc ->
+            exc.Types |> Array.filter (isNull >> not)
+
     let candidates =
-        assembly.GetTypes()
+        types
         |> Seq.filter target.IsAssignableFrom
         |> Seq.filter (getCustomAttribute<BaboonEntryPointAttribute> >> Option.isSome)
 

@@ -24,7 +24,7 @@
     <PropertyGroup>
         <PackageId>TromboneChamp.BaboonAPI</PackageId>
         <Title>BaboonAPI</Title>
-        <Version>2.5.0</Version>
+        <Version>2.6.0-pre</Version>
         <Authors>offbeatwitch</Authors>
         <Company>TromboneChamps</Company>
         <PackageTags>Trombone Champ</PackageTags>
@@ -57,6 +57,7 @@
         <Compile Include="internal\ScoreStorage.fs" />
         <Compile Include="internal\EntryPointLoader.fs" />
         <Compile Include="internal\Debug.fs" />
+        <Compile Include="internal\BaseGame.fs" />
         <Compile Include="patch\TrackCountPatches.fs" />
         <Compile Include="patch\TrackrefPatches.fs" />
         <Compile Include="patch\BaseTracksLoaderPatch.fs" />
@@ -74,7 +75,7 @@
     <ItemGroup>
         <PackageReference Include="BepInEx.Core" Version="5.*" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-        <PackageReference Include="TromboneChamp.GameLibs" Version="1.13.0-beta" />
+        <PackageReference Include="TromboneChamp.GameLibs" Version="1.18.0" />
     </ItemGroup>
 
     <ItemGroup>

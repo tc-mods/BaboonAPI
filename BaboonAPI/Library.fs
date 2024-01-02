@@ -7,7 +7,7 @@ open BaboonAPI.Patch
 open BepInEx
 open HarmonyLib
 
-[<BepInPlugin("ch.offbeatwit.baboonapi.plugin", "BaboonAPI", "2.5.0.0")>]
+[<BepInPlugin("ch.offbeatwit.baboonapi.plugin", "BaboonAPI", "2.6.0.0")>]
 type BaboonPlugin() =
     inherit BaseUnityPlugin()
 
@@ -20,6 +20,10 @@ type BaboonPlugin() =
 
         // Apply the initializer patchset
         harmony.PatchAll(typeof<BrandingPatch>)
+
+    member this.TestReload () =
+        TrackAccessor.loadAsync()
+        |> this.StartCoroutine
 
     member this.TryLoadTracks() =
         try

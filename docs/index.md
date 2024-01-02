@@ -6,6 +6,7 @@ Welcome to the BaboonAPI docs, tromboner!
 
 - [Safe Initialization](initializer-guide.md)
 - [Track Lookup](track-lookup-guide.fsx)
+- [Entrypoints](entrypoints-guide.fsx)
 - [Track Registration](tracks-guide.md)
 
 ## Quick Reference
