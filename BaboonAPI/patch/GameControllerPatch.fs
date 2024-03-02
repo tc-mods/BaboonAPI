@@ -105,17 +105,23 @@ type private GameControllerExtension() =
 
 [<HarmonyPatch>]
 type GameControllerPatch() =
+    static let freeplay_f = AccessTools.Field(typeof<GameController>, "freeplay")
+
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<GameController>, "Start")>]
     static member TranspileStart(instructions: CodeInstruction seq) : CodeInstruction seq =
         let matcher = CodeMatcher(instructions)
 
-        // from `string text = "/trackassets/";`
+        // from `string text = "";`
         let startIndex =
             matcher
                 .Start()
                 .MatchForward(false, [|
-                    CodeMatch(OpCodes.Ldstr, "/trackassets/")
+                    CodeMatch (OpCodes.Ldstr, "")
+                    CodeMatch OpCodes.Stloc_1
+                    CodeMatch OpCodes.Ldarg_0
+                    CodeMatch (fun ins -> ins.LoadsField(freeplay_f))
+                    CodeMatch OpCodes.Brtrue
                 |])
                 .ThrowIfInvalid("Could not find start of injection point in GameController#Start")
                 .Pos

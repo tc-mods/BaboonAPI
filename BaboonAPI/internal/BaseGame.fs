@@ -3,9 +3,11 @@ namespace BaboonAPI.Internal.BaseGame
 open System.IO
 open System.Runtime.Serialization.Formatters.Binary
 open BaboonAPI.Hooks.Tracks
+open BaboonAPI.Internal
 open BaboonAPI.Utility
 open BaboonAPI.Utility.Unity
 open UnityEngine
+open UnityEngine.Localization.Settings
 
 /// Base game loaded track, emulates base game behaviour for charts
 type public BaseGameLoadedTrack internal (trackref: string, bundle: AssetBundle) =
@@ -34,60 +36,75 @@ type public BaseGameLoadedTrack internal (trackref: string, bundle: AssetBundle)
         member this.OnResume _ = ()
 
 /// Base game TromboneTrack
-type public BaseGameTrack internal (data: string[]) =
+type public BaseGameTrack internal (data: SavedLevelMetadata, trackref: string) =
+    let trackPath = $"{Application.streamingAssetsPath}/trackassets/{trackref}"
+
     interface TromboneTrack with
-        member _.trackname_long = data[0]
-        member _.trackname_short = data[1]
-        member _.trackref = data[2]
-        member _.year = data[3]
-        member _.artist = data[4]
-        member _.genre = data[5]
-        member _.desc = data[6]
-        member _.difficulty = int data[7]
-        member _.length = int data[8]
-        member _.tempo = int data[9]
+        member _.trackname_long = data.trackname_long
+        member _.trackname_short = data.trackname_short
+        member _.trackref = trackref
+        member _.year = data.year
+        member _.artist = data.artist
+        member _.genre = data.genre
+        member _.desc = data.description
+        member _.difficulty = data.difficulty
+        member _.length = data.length
+        member _.tempo = data.tempo
 
         member this.LoadTrack() =
-            let trackref = (this :> TromboneTrack).trackref
-            let bundle = AssetBundle.LoadFromFile $"{Application.streamingAssetsPath}/trackassets/{trackref}"
+            let bundle = AssetBundle.LoadFromFile $"{trackPath}/contentbundle"
             new BaseGameLoadedTrack (trackref, bundle)
 
         member this.IsVisible() =
-            let trackref = (this :> TromboneTrack).trackref
             match trackref with
             | "einefinal" -> GlobalVariables.localsave.progression_trombone_champ
             | _ -> true
 
         member this.LoadChart() =
-            let trackref = (this :> TromboneTrack).trackref
-            let path = $"{Application.streamingAssetsPath}/leveldata/{trackref}.tmb"
+            let path = $"{trackPath}/trackdata.tmb"
             use stream = File.Open(path, FileMode.Open)
             BinaryFormatter().Deserialize(stream) :?> SavedLevel
 
+    interface Sortable with
+        member _.sortOrder = data.sort_order
+
     interface Previewable with
         member this.LoadClip() =
-            let trackref = (this :> TromboneTrack).trackref
-            let path = $"{Application.streamingAssetsPath}/trackclips/{trackref}-sample.ogg"
+            let path = $"{trackPath}/sample.ogg"
 
             loadAudioClip (path, AudioType.OGGVORBIS)
-            |> Coroutines.map (Result.map (fun audioClip -> { Clip = audioClip; Volume = 0.9f }))
+            |> (Coroutines.map << Result.map) (fun audioClip -> { Clip = audioClip; Volume = 0.9f })
 
     interface Graphable with
         member this.CreateGraph() =
-            match (this :> TromboneTrack).trackref with
+            match trackref with
             | "warmup" -> Some (SongGraph.all 10)
             | "einefinal" -> Some (SongGraph.all 104)
             | _ -> None
 
-type internal BaseGameTrackRegistry(songs: SongData) =
-    /// List of base game trackrefs
-    member _.trackrefs =
-        songs.data_tracktitles
-        |> Seq.map (fun data -> data[2])
-        |> Seq.toList
-
+type internal BaseGameTrackRegistry(path: string, localeSuffixes: string array) =
     interface TrackRegistrationEvent.Listener with
         override this.OnRegisterTracks () = seq {
-            for array in songs.data_tracktitles do
-                yield BaseGameTrack array
+            let dirs = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
+            let mutable trackrefs = []
+
+            let locale = LocalizationSettings.SelectedLocale
+            let postfix =
+                localeSuffixes
+                |> Array.tryItem (int locale.SortOrder)
+                |> Option.defaultValue "en"
+
+            for trackdir in dirs do
+                let trackref = Path.GetFileName (trackdir.TrimEnd [|'/'|])
+                trackrefs <- trackref :: trackrefs
+
+                // TODO: fall back to other metadata?
+                let metadataPath = Path.Combine(trackdir, $"metadata_{postfix}.tmb")
+                if File.Exists(metadataPath) then
+                    use stream = File.Open (metadataPath, FileMode.Open)
+                    let data = BinaryFormatter().Deserialize(stream) :?> SavedLevelMetadata
+
+                    yield BaseGameTrack (data, trackref)
+
+            ScoreStorage.initialize trackrefs
         }

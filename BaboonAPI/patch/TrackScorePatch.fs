@@ -3,6 +3,7 @@
 open System.Reflection.Emit
 open BaboonAPI.Internal.ScoreStorage
 open HarmonyLib
+open UnityEngine
 
 module private TrackScoresUtility =
     let get (trackref: string) = (getStorageFor trackref).Load trackref
@@ -126,32 +127,11 @@ type TrackScorePatches() =
             |])
             .InstructionEnumeration()
 
-    [<HarmonyTranspiler>]
-    [<HarmonyPatch(typeof<LatchController>, "showHatchCanvas")>]
-    static member PatchHatchCanvas(instructions: CodeInstruction seq) : CodeInstruction seq =
-        let matcher = CodeMatcher(instructions)
-
-        let startIndex =
-            matcher.MatchForward(true, [|
-                CodeMatch (fun ins -> ins.LoadsConstant(0L))
-                CodeMatch OpCodes.Stloc_0
-                CodeMatch OpCodes.Br
-            |]).ThrowIfInvalid("Could not find start of for loop in LatchController#showHatchCanvas").Pos
-
-        let endIndex =
-            matcher.MatchForward(true, [|
-                CodeMatch OpCodes.Ldlen
-                CodeMatch OpCodes.Conv_I4
-                CodeMatch OpCodes.Blt
-            |]).ThrowIfInvalid("Could not find end of for loop in LatchController#showHatchCanvas").Pos
-
-        matcher
-            .RemoveInstructionsInRange(startIndex, endIndex)
-            .Start()
-            .Advance(startIndex)
-            .InsertAndAdvance([|
-                CodeInstruction OpCodes.Ldarg_0
-                CodeInstruction.Call(typeof<TrackScoresAccessor>, "countSRanks")
-                CodeInstruction.StoreField(typeof<LatchController>, "num_s")
-            |])
-            .InstructionEnumeration()
+    [<HarmonyPrefix>]
+    [<HarmonyPatch(typeof<LatchController>, "getNumberOfSScores")>]
+    static member PatchLatchCheck(___num_s: int outref) =
+        if GlobalVariables.localsettings.acc_unlockhatches then
+            ___num_s <- Mathf.FloorToInt((float32 GlobalVariables.localsave.tracks_played) * 0.25f)
+        else
+            ___num_s <- TrackScoresAccessor.countSRanks()
+        false

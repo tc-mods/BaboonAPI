@@ -88,12 +88,12 @@ module internal ModInitializer =
 
 [<HarmonyPatch(typeof<BrandingController>)>]
 type BrandingPatch() =
-    static let loadlevel_m = AccessTools.Method(typeof<SaverLoader>, "loadLevelData")
+    static let loadlevel_m = AccessTools.Method(typeof<SaverLoader>, "loadAllTrackMetadata")
 
     static member RunInitialize () =
         ModInitializer.Initialize()
 
-    // Remove SaverLoader.loadLevelData() call, we need to patch it first
+    // Remove SaverLoader.loadAllTrackMetadata() call, we need to patch it first
     [<HarmonyPatch("Start")>]
     [<HarmonyTranspiler>]
     static member PatchStart (instructions: CodeInstruction seq): CodeInstruction seq =

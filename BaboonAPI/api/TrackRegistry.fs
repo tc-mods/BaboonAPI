@@ -98,6 +98,11 @@ type public Previewable =
     /// </remarks>
     abstract LoadClip: unit -> YieldTask<Result<TrackAudio, string>>
 
+/// TromboneTrack extension to indicate sortability
+type public Sortable =
+    /// Sort order for this track
+    abstract sortOrder: int
+
 /// Represents a song graph
 type public SongGraph =
     { fury: int

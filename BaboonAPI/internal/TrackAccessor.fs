@@ -7,6 +7,11 @@ open BaboonAPI.Utility.Coroutines
 exception DuplicateTrackrefException of string
 
 let makeTrackData (track: TromboneTrack) (trackindex: int): SingleTrackData =
+    let sortOrder =
+        match track with
+        | :? Sortable as sortable -> sortable.sortOrder
+        | _ -> 999
+
     SingleTrackData(trackname_long = track.trackname_long,
                     trackname_short = track.trackname_short,
                     year = track.year,
@@ -17,6 +22,7 @@ let makeTrackData (track: TromboneTrack) (trackindex: int): SingleTrackData =
                     tempo = track.tempo,
                     length = track.length,
                     trackref = track.trackref,
+                    sort_order = sortOrder,
                     trackindex = trackindex)
 
 type RegisteredTrack =

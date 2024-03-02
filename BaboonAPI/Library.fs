@@ -28,6 +28,8 @@ type BaboonPlugin() =
     member this.TryLoadTracks() =
         try
             TrackAccessor.load()
+            // First-time backup.
+            ScoreStorage.baseGameStorage |> Option.iter (_.firstTimeBackup())
             Ok(())
         with
         | TrackAccessor.DuplicateTrackrefException trackref ->
@@ -60,9 +62,5 @@ type BaboonPlugin() =
                 ] |> List.iter harmony.PatchAll
 
                 // We've patched it now so we can call it.
-                SaverLoader.loadLevelData()
-
-                // First-time backup.
-                ScoreStorage.baseGameStorage
-                |> Option.iter (fun bgs -> bgs.firstTimeBackup()))
+                SaverLoader.loadAllTrackMetadata())
             |> Result.bind this.TryLoadTracks
