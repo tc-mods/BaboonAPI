@@ -10,8 +10,8 @@ open UnityEngine
 type LoaderPatch() =
     static let logger = Logger.CreateLogSource "BaboonAPI.BaseTracksLoader"
 
-    static member Prefix (___locale_suffixes: string array inref) =
+    static member Prefix () =
         let path = $"{Application.streamingAssetsPath}/trackassets"
-        TrackRegistrationEvent.EVENT.Register (BaseGameTrackRegistry (path, ___locale_suffixes))
+        TrackRegistrationEvent.EVENT.Register (BaseGameTrackRegistry path)
 
         false

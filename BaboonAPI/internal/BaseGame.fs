@@ -82,17 +82,14 @@ type public BaseGameTrack internal (data: SavedLevelMetadata, trackref: string) 
             | "einefinal" -> Some (SongGraph.all 104)
             | _ -> None
 
-type internal BaseGameTrackRegistry(path: string, localeSuffixes: string array) =
+type internal BaseGameTrackRegistry(path: string) =
     interface TrackRegistrationEvent.Listener with
         override this.OnRegisterTracks () = seq {
             let dirs = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
             let mutable trackrefs = []
 
             let locale = LocalizationSettings.SelectedLocale
-            let postfix =
-                localeSuffixes
-                |> Array.tryItem (int locale.SortOrder)
-                |> Option.defaultValue "en"
+            let postfix = locale.Identifier.Code
 
             for trackdir in dirs do
                 let trackref = Path.GetFileName (trackdir.TrimEnd [|'/'|])
