@@ -10,7 +10,7 @@ let makeTrackData (track: TromboneTrack) (trackindex: int): SingleTrackData =
     let sortOrder =
         match track with
         | :? Sortable as sortable -> sortable.sortOrder
-        | _ -> 999
+        | _ -> 999 + trackindex
 
     SingleTrackData(trackname_long = track.trackname_long,
                     trackname_short = track.trackname_short,
