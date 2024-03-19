@@ -54,6 +54,7 @@ type BaboonPlugin() =
                     typeof<TrackLoaderPatch>
                     typeof<TrackTitlePatches>
                     typeof<LoaderPatch>
+                    typeof<LanguageChangerPatch>
                     typeof<GameControllerPatch>
                     typeof<PausePatches>
                     typeof<PreviewPatch>
