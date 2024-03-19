@@ -8,7 +8,7 @@ open HarmonyLib
 open UnityEngine
 
 type private FreePlayLoader() =
-    let bundle = AssetBundle.LoadFromFile $"{Application.streamingAssetsPath}/trackassets/freeplay"
+    let bundle = AssetBundle.LoadFromFile $"{Application.streamingAssetsPath}/trackassets/freeplay/contentbundle"
 
     interface LoadedTromboneTrack with
         member this.trackref = "freeplay"
