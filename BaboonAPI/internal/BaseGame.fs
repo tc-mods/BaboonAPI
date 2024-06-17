@@ -57,7 +57,7 @@ type public BaseGameTrack internal (data: SavedLevelMetadata, trackref: string) 
 
         member this.IsVisible() =
             match trackref with
-            | "einefinal" -> GlobalVariables.localsave.progression_trombone_champ
+            | "einefinal" | "tchampmedley" -> GlobalVariables.localsave.progression_trombone_champ
             | _ -> true
 
         member this.LoadChart() =
