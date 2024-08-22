@@ -118,7 +118,7 @@ type GameControllerPatch() =
                 .Start()
                 .MatchForward(false, [|
                     CodeMatch (OpCodes.Ldstr, "")
-                    CodeMatch OpCodes.Stloc_1
+                    CodeMatch (fun ins -> ins.IsStloc())
                     CodeMatch OpCodes.Ldarg_0
                     CodeMatch (fun ins -> ins.LoadsField(freeplay_f))
                     CodeMatch OpCodes.Brtrue
@@ -133,11 +133,11 @@ type GameControllerPatch() =
             matcher
                 .MatchForward(true, [|
                     CodeMatch OpCodes.Ldnull
-                    CodeMatch OpCodes.Stloc_2
-                    CodeMatch OpCodes.Ldc_I4_6
+                    CodeMatch (fun ins -> ins.IsStloc())
+                    CodeMatch OpCodes.Br
                 |])
                 .ThrowIfInvalid("Could not find end of injection point in GameController#Start")
-                .Pos - 1 // back up to stloc_2
+                .Pos - 1 // back up to stloc
 
         matcher.RemoveInstructionsInRange(startIndex, endIndex)
             .Start()
@@ -156,20 +156,34 @@ type GameControllerPatch() =
     static member LoadChartTranspiler(instructions: CodeInstruction seq): CodeInstruction seq =
         let matcher =
             CodeMatcher(instructions)
-                .MatchForward(true, [|
-                    CodeMatch OpCodes.Ldnull
-                    CodeMatch OpCodes.Stloc_2
+                .MatchForward(false, [|
+                    CodeMatch OpCodes.Ldarg_2
+                    CodeMatch OpCodes.Brtrue
                 |])
-                .ThrowIfInvalid("Could not find injection point in GameController#tryToLoadLevel")
+                .ThrowIfInvalid("Could not find start of injection point in GameController#tryToLoadLevel")
 
-        let endpos = matcher.Pos
-        matcher.RemoveInstructionsInRange(0, endpos)
+        let startPos = matcher.Pos
+        let startLabels = matcher.Labels
+        let endPos =
+           matcher
+                .MatchForward(true, [|
+                    CodeMatch (fun ins -> ins.IsLdloc())
+                    CodeMatch OpCodes.Callvirt
+                    CodeMatch OpCodes.Ldnull
+                    CodeMatch (fun ins -> ins.IsStloc())
+                |])
+                .ThrowIfInvalid("Could not find end of injection point in GameController#tryToLoadLevel")
+                .Pos
+
+        matcher.RemoveInstructionsInRange(startPos, endPos)
             .Start()
+            .Advance(startPos)
             .Insert([|
                 CodeInstruction OpCodes.Ldarg_1
                 CodeInstruction.Call(typeof<GameControllerExtension>, "LoadChart", [| typeof<string> |])
-                CodeInstruction OpCodes.Stloc_3
+                CodeInstruction (OpCodes.Stloc_S, 12)
             |])
+            .AddLabels(startLabels)
             .InstructionEnumeration()
 
     [<HarmonyPrefix>]
