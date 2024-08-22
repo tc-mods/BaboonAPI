@@ -106,6 +106,7 @@ type private GameControllerExtension() =
 [<HarmonyPatch>]
 type GameControllerPatch() =
     static let freeplay_f = AccessTools.Field(typeof<GameController>, "freeplay")
+    static let file_exists_m = AccessTools.Method(typeof<System.IO.File>, "Exists")
 
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<GameController>, "Start")>]
@@ -154,13 +155,28 @@ type GameControllerPatch() =
     [<HarmonyTranspiler>]
     [<HarmonyPatch(typeof<GameController>, "tryToLoadLevel")>]
     static member LoadChartTranspiler(instructions: CodeInstruction seq): CodeInstruction seq =
-        let matcher =
-            CodeMatcher(instructions)
+        let matcher = CodeMatcher(instructions)
+
+        let existsLabels =
+            matcher
                 .MatchForward(false, [|
-                    CodeMatch OpCodes.Ldarg_2
-                    CodeMatch OpCodes.Brtrue
+                    CodeMatch OpCodes.Ldloc_0
+                    CodeMatch (fun ins -> ins.Calls(file_exists_m))
+                    CodeMatch OpCodes.Brfalse
                 |])
-                .ThrowIfInvalid("Could not find start of injection point in GameController#tryToLoadLevel")
+                .ThrowIfInvalid("Could not find File.Exists call in GameController#tryToLoadLevel")
+                .Labels
+        matcher
+            .RemoveInstructions(3)
+            .AddLabels(existsLabels)
+
+            // Find the start of the injection point
+            .MatchForward(false, [|
+                CodeMatch OpCodes.Ldarg_2
+                CodeMatch OpCodes.Brtrue
+            |])
+            .ThrowIfInvalid("Could not find start of injection point in GameController#tryToLoadLevel")
+            |> ignore
 
         let startPos = matcher.Pos
         let startLabels = matcher.Labels
