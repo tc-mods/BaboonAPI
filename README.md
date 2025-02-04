@@ -1,6 +1,6 @@
 ﻿# BaboonAPI
 
-[![download counter](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Ftrombone-champ.thunderstore.io%2Fapi%2Fv1%2Fpackage-metrics%2FTromboneChamps%2FBaboonAPI%2F&query=%24.downloads&label=downloads)](https://trombone-champ.thunderstore.io/package/TromboneChamps/BaboonAPI/)
+[![download counter](https://img.shields.io/thunderstore/dt/TromboneChamps/BaboonAPI)](https://trombone-champ.thunderstore.io/package/TromboneChamps/BaboonAPI/)
 
 Trombone Champ modding API, aiming to provide nicer hooks to
 promote compatibility & improve the base game code
