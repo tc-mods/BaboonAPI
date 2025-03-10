@@ -1,7 +1,9 @@
 ﻿namespace BaboonAPI.Hooks.Initializer
 
 open System
+open System.Collections.Generic
 open BaboonAPI.Event
+open BaboonAPI.Utility.Coroutines
 open BepInEx
 open UnityEngine
 
@@ -18,6 +20,23 @@ module private ResultExt =
         match error with
         | Some err -> Error err
         | None -> Ok ()
+
+    let runAsync (start: IEnumerator<YieldInstruction> -> Coroutine) (tasks: YieldTask<Result<unit, 'err>> seq) : YieldTask<Result<unit, 'err>> =
+        let mutable error = None
+
+        let coro =
+            coroutine {
+                for entry in tasks do
+                    if Option.isNone error then
+                        match! entry with
+                        | Ok () -> ()
+                        | Error err -> error <- Some err
+            } |> start
+
+        YieldTask(coro, fun () ->
+            match error with
+            | None -> Ok ()
+            | Some error -> Error error)
 
 /// Load error returned by plugins when they fail to load.
 type LoadError = { PluginInfo: PluginInfo
@@ -88,3 +107,15 @@ module GameInitializationEvent =
         EVENT.Register { new Listener with
                            override _.Initialize() =
                                attempt info (FuncConvert.FromAction applier) }
+
+/// Async game initialization event
+module AsyncGameInitializationEvent =
+    type Listener =
+        abstract Initialize: unit -> YieldTask<Result<unit, LoadError>>
+
+    let EVENT = EventFactory.create(fun listeners ->
+        { new Listener with
+            override _.Initialize () =
+                listeners
+                |> Seq.map (_.Initialize())
+                |> ResultExt.runAsync GlobalVariables.track_collection_loader.StartCoroutine })

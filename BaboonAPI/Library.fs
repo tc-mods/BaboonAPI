@@ -19,6 +19,7 @@ type BaboonPlugin() =
             cap.Attach "scores" ScoreStorage.customStorage)
 
         // Apply the initializer patchset
+        harmony.PatchAll(typeof<SafeguardPatch>)
         harmony.PatchAll(typeof<BrandingPatch>)
 
     member this.TestReload () =

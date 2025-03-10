@@ -45,3 +45,7 @@ let public loadTexture (path: string) =
     let www = UnityWebRequestTexture.GetTexture uri
 
     awaitAsyncOperation (mapResult (fun op -> DownloadHandlerTexture.GetContent op.webRequest)) (www.SendWebRequest ())
+
+/// Send a web request and map the result
+let public makeRequest (binder: UnityWebRequestAsyncOperation -> 'a) (www: UnityWebRequest) =
+    awaitAsyncOperation (mapResult binder) (www.SendWebRequest ())

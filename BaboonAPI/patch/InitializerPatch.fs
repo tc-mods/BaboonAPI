@@ -8,16 +8,18 @@ open UnityEngine
 open UnityEngine.UI
 
 module internal ModInitializer =
-    let mutable initResult = None
+    type InitializerState =
+        | Success
+        | Failed
+        | NotRun
 
-    let Initialize () =
-        initResult <- Some (GameInitializationEvent.EVENT.invoker.Initialize ())
+    let mutable initialized = NotRun
 
-    let ShowResult (bc: BrandingController) = coroutine {
+    let showResult (bc: BrandingController) (result: Result<unit, LoadError>) = coroutine {
         let failtxt = bc.failed_to_load_error.transform.Find("full_text").GetComponent<Text>()
 
-        match initResult with
-        | Some (Ok _) ->
+        match result with
+        | Ok () ->
             let successTxt = GameObject("BaboonApiModsText")
             let s = successTxt.AddComponent<Text>()
             let rect = successTxt.GetComponent<RectTransform>()
@@ -46,8 +48,14 @@ module internal ModInitializer =
                     rect.offsetMin <- Vector2(value, 30f))
                 |> ignore
 
-            bc.Invoke("killandload", 6.45f)
-        | Some (Error err) ->
+            initialized <- Success
+            if GlobalVariables.skipbrandingscreen then
+                bc.Invoke("killandload", 0.75f)
+            else
+                bc.Invoke("doHolyWowAnim", 0.75f)
+        | Error err ->
+            initialized <- Failed
+
             let meta = err.PluginInfo.Metadata
             failtxt.verticalOverflow <- VerticalWrapMode.Overflow
             failtxt.alignment <- TextAnchor.UpperCenter
@@ -63,35 +71,59 @@ module internal ModInitializer =
 
             bc.epwarningcg.gameObject.SetActive false
             bc.failed_to_load_error.SetActive true
-        | None ->
-            failtxt.verticalOverflow <- VerticalWrapMode.Overflow
-            failtxt.alignment <- TextAnchor.UpperLeft
-            failtxt.rectTransform.sizeDelta <- Vector2(980f, 365f)
-            failtxt.text <- String.concat "\n" [
-                "<size=27>Uh oh</size>"
-                "BaboonAPI's initializer event didn't fire! One of several things may have happened:"
-                "1. Trombone Champ updated and our initializer patch broke"
-                "2. Another mod is interfering with BaboonAPI, probably by accident"
-                "3. The evil doppelgänger <color=#F3385A>Trazom</color> is attempting to break your game"
-                ""
-                "Try updating your mods or disabling some temporarily?"
-            ]
-
-            bc.epwarningcg.gameObject.SetActive false
-            bc.failed_to_load_error.SetActive true
 
         ()
     }
-    
-    let IsInitialized () =
-        initResult |> Option.exists Result.isOk
+
+    let Initialize (bc: BrandingController) =
+        coroutine {
+            match GameInitializationEvent.EVENT.invoker.Initialize() with
+            | Ok () ->
+                let! asyncResult = AsyncGameInitializationEvent.EVENT.invoker.Initialize()
+                yield bc.StartCoroutine(showResult bc asyncResult)
+            | Error err ->
+                yield bc.StartCoroutine(showResult bc (Error err))
+        }
+
+    let GetStatus () = initialized
+
+/// Safeguard prefix patches that try to cover for other patch errors
+[<HarmonyPatch(typeof<BrandingController>)>]
+type SafeguardPatch() =
+    [<HarmonyPatch("Start")>]
+    [<HarmonyPrefix>]
+    static member Prefix (__instance: BrandingController) =
+        let failtxt = __instance.failed_to_load_error.transform.Find("full_text").GetComponent<Text>()
+        failtxt.verticalOverflow <- VerticalWrapMode.Overflow
+        failtxt.alignment <- TextAnchor.UpperLeft
+        failtxt.rectTransform.sizeDelta <- Vector2(980f, 365f)
+        failtxt.text <- String.concat "\n" [
+            "<size=27>Uh oh</size>"
+            "BaboonAPI's initializer event didn't fire! One of several things may have happened:"
+            "1. Trombone Champ updated and our initializer patch broke"
+            "2. Another mod is interfering with BaboonAPI, probably by accident"
+            "3. The evil doppelgänger <color=#F3385A>Trazom</color> is attempting to break your game"
+            ""
+            "Try updating your mods or disabling some temporarily?"
+        ]
+
+        true
+
+    [<HarmonyPatch("killandload")>]
+    [<HarmonyPrefix>]
+    static member KillPrefix (__instance: BrandingController) =
+        // If initialization fails, don't run killandload
+        // Extra safeguard against mods calling killandload or base game changes
+        ModInitializer.GetStatus() = ModInitializer.Success
 
 [<HarmonyPatch(typeof<BrandingController>)>]
 type BrandingPatch() =
     static let loadtracks_m = AccessTools.Method(typeof<TrackCollections>, "buildTrackCollections")
 
-    static member RunInitialize () =
-        ModInitializer.Initialize()
+    static member RunInitialize (instance: BrandingController) =
+        ModInitializer.Initialize instance
+        |> instance.StartCoroutine
+        |> ignore
 
     // Remove TrackCollections.buildTrackCollections() call, we need to patch it first
     [<HarmonyPatch("Start")>]
@@ -106,34 +138,15 @@ type BrandingPatch() =
             |])
             .ThrowIfInvalid("Could not find TrackCollections#buildTrackCollections")
             // Run our initializer in here instead
-            .RemoveInstructions(3)
+            .Advance(1)
+            .RemoveInstructions(2)
             .Set(OpCodes.Call, AccessTools.Method(typeof<BrandingPatch>, "RunInitialize"))
-            .InstructionEnumeration()
-
-    [<HarmonyPatch("doHolyWowAnim")>]
-    [<HarmonyTranspiler>]
-    static member PatchSequence (instructions: CodeInstruction seq): CodeInstruction seq =
-        CodeMatcher(instructions)
             .MatchForward(false, [|
                 CodeMatch OpCodes.Ldarg_0
-                CodeMatch (OpCodes.Ldstr, "killandload")
+                CodeMatch (OpCodes.Ldstr, "doHolyWowAnim")
                 CodeMatch (fun ins -> ins.LoadsConstant())
                 CodeMatch OpCodes.Call
             |])
+            .ThrowIfInvalid("Could not find Invoke(\"doHolyWowAnim\")")
             .RemoveInstructions(4)
             .InstructionEnumeration()
-
-    [<HarmonyPatch("epwarning")>]
-    [<HarmonyPostfix>]
-    static member WarningPostfix (__instance: BrandingController) =
-        ModInitializer.ShowResult __instance
-        |> __instance.StartCoroutine
-        |> ignore
-        ()
-
-    [<HarmonyPatch("killandload")>]
-    [<HarmonyPrefix>]
-    static member KillPrefix () =
-        // If initialization fails, don't run killandload
-        // Extra safeguard against mods calling killandload or base game changes
-        ModInitializer.IsInitialized()
