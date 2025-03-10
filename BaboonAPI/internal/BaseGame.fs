@@ -3,8 +3,10 @@ namespace BaboonAPI.Internal.BaseGame
 open System.IO
 open System.Runtime.Serialization.Formatters.Binary
 open BaboonAPI.Hooks.Tracks
+open BaboonAPI.Hooks.Tracks.Collections
 open BaboonAPI.Internal
 open BaboonAPI.Utility
+open BaboonAPI.Utility.Coroutines
 open BaboonAPI.Utility.Unity
 open UnityEngine
 open UnityEngine.Localization.Settings
@@ -82,7 +84,47 @@ type public BaseGameTrack internal (data: SavedLevelMetadata, trackref: string) 
             | "einefinal" -> Some (SongGraph.all 104)
             | _ -> None
 
-type internal BaseGameTrackRegistry(path: string) =
+/// Base game has an array of sprites for its collections, this maps them to readable names
+type internal BaseGameCollectionSprites(sprites: Sprite array) =
+    member _.baseGame = sprites[0]
+    member _.tootmaker = sprites[1]
+    member _.custom = sprites[2]
+    member _.favorites = sprites[3]
+    member _.allTracks = sprites[4]
+
+type internal BaseGameTrackCollection(localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
+    inherit LazyTromboneCollection("default", localizer.getLocalizedText("collections_name_default"), localizer.getLocalizedText("collections_desc_default"))
+
+    override this.LoadSprite() =
+        sync (fun () -> Ok sprites.baseGame)
+
+    override this.BuildTrackList() =
+        TrackAccessor.allTracks()
+        |> Seq.map _.track
+        |> Seq.filter (fun t -> t :? BaseGameTrack)
+
+type internal AllTracksCollection(localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
+    inherit LazyTromboneCollection("all", localizer.getLocalizedText("collections_name_all"), localizer.getLocalizedText("collections_desc_all"))
+
+    override this.LoadSprite() =
+        sync (fun () -> Ok sprites.allTracks)
+
+    override this.BuildTrackList() =
+        TrackAccessor.allTracks()
+        |> Seq.map _.track
+
+type internal FavoriteTracksCollection(localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
+    inherit LazyTromboneCollection("favorites", localizer.getLocalizedText("collections_name_favorites"), localizer.getLocalizedText("collections_desc_favorites"))
+
+    override this.LoadSprite() =
+        sync (fun () -> Ok sprites.favorites)
+
+    override this.BuildTrackList() =
+        TrackAccessor.allTracks()
+        |> Seq.map _.track
+        |> Seq.filter (TrackAccessor.toTrackData >> _.is_favorite)
+
+type internal BaseGameTrackRegistry(path: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
     interface TrackRegistrationEvent.Listener with
         override this.OnRegisterTracks () = seq {
             let dirs = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
@@ -104,4 +146,11 @@ type internal BaseGameTrackRegistry(path: string) =
                     yield BaseGameTrack (data, trackref)
 
             ScoreStorage.initialize trackrefs
+        }
+
+    interface TrackCollectionRegistrationEvent.Listener with
+        member this.OnRegisterCollections() = seq {
+            yield BaseGameTrackCollection (localizer, sprites)
+            yield FavoriteTracksCollection (localizer, sprites)
+            yield AllTracksCollection (localizer, sprites)
         }

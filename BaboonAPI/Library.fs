@@ -50,11 +50,9 @@ type BaboonPlugin() =
 
                 // Apply the rest of the patches
                 [
-                    typeof<TrackCountPatches>
                     typeof<TrackLoaderPatch>
-                    typeof<TrackTitlePatches>
                     typeof<LoaderPatch>
-                    typeof<LanguageChangerPatch>
+                    typeof<TrackLoadingPatch>
                     typeof<GameControllerPatch>
                     typeof<PausePatches>
                     typeof<PreviewPatch>
@@ -63,5 +61,5 @@ type BaboonPlugin() =
                 ] |> List.iter harmony.PatchAll
 
                 // We've patched it now so we can call it.
-                SaverLoader.loadAllTrackMetadata())
+                GlobalVariables.track_collection_loader.buildTrackCollections())
             |> Result.bind this.TryLoadTracks

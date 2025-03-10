@@ -6,17 +6,25 @@ open BaboonAPI.Internal.BaseGame
 open HarmonyLib
 open UnityEngine
 
-[<HarmonyPatch(typeof<SaverLoader>, "loadAllTrackMetadata")>]
+[<HarmonyPatch(typeof<TrackCollections>, "buildTrackCollections")>]
 type LoaderPatch() =
-    static member Prefix () =
+    static member Prefix (__instance: TrackCollections, ___string_localizer: StringLocalizer, ___collection_art_defaults: Sprite array) =
         let path = $"{Application.streamingAssetsPath}/trackassets"
-        TrackRegistrationEvent.EVENT.Register (BaseGameTrackRegistry path)
+        let sprites = BaseGameCollectionSprites ___collection_art_defaults
+        let registry = BaseGameTrackRegistry (path, ___string_localizer, sprites)
+        TrackRegistrationEvent.EVENT.Register registry
+        TrackCollectionRegistrationEvent.EVENT.Register registry
 
         false
 
-[<HarmonyPatch(typeof<LanguageChanger>, "loadMetadata")>]
-type LanguageChangerPatch() =
+
+[<HarmonyPatch(typeof<SaverLoader>, "loadAllSaveHighScores")>]
+type TrackLoadingPatch() =
     static member Prefix () =
-        TrackAccessor.load()
+        let loader = GlobalVariables.track_collection_loader
+
+        TrackAccessor.loadCollectionsAsync()
+        |> loader.StartCoroutine
+        |> ignore
 
         false

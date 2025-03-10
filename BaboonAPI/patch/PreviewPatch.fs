@@ -31,10 +31,10 @@ type PreviewPatch() =
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<LevelSelectClipPlayer>, "beginClipSearch")>]
-    static member ClipSearchPrefix(__instance: LevelSelectClipPlayer, ___current_trackref: string inref) =
+    static member ClipSearchPrefix(__instance: LevelSelectClipPlayer, ___current_track: SingleTrackData inref) =
         let track =
-            TrackAccessor.tryFetchRegisteredTrack ___current_trackref
-            |> Option.map (fun rt -> rt.track)
+            TrackAccessor.tryFetchRegisteredTrack ___current_track.trackref
+            |> Option.map (_.track)
 
         match track with
         | Some (:? Previewable as preview) ->

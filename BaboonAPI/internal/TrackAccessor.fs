@@ -3,14 +3,35 @@
 open System.Collections.Generic
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Utility.Coroutines
+open UnityEngine
 
 exception DuplicateTrackrefException of string
+
+let makeSongGraph (track: TromboneTrack) =
+    let generate _ =
+        Mathf.Clamp(track.difficulty * 10 + Random.Range (-25, 5), 10, 104)
+
+    let graph =
+        match track with
+        | :? Graphable as graphable ->
+            graphable.CreateGraph()
+        | _ -> None
+
+    match graph with
+    | Some g ->
+        g.asArray
+    | None ->
+        Array.init 5 generate
 
 let makeTrackData (track: TromboneTrack) (trackindex: int): SingleTrackData =
     let sortOrder =
         match track with
         | :? Sortable as sortable -> sortable.sortOrder
         | _ -> 999 + trackindex
+
+    let graph = makeSongGraph(track)
+    let storage = ScoreStorage.getStorageFor track.trackref
+    let favorites = GlobalVariables.localsave_favtracks
 
     SingleTrackData(trackname_long = track.trackname_long,
                     trackname_short = track.trackname_short,
@@ -23,6 +44,9 @@ let makeTrackData (track: TromboneTrack) (trackindex: int): SingleTrackData =
                     length = track.length,
                     trackref = track.trackref,
                     sort_order = sortOrder,
+                    graphpoints = graph,
+                    is_favorite = favorites.Contains(track.trackref),
+                    user_scores = storage.Load(track.trackref).ToBaseGame(),
                     trackindex = trackindex)
 
 type RegisteredTrack =
@@ -77,6 +101,19 @@ type TrackLoader() =
                 raise task.Exception
         }
 
+    member _.ResolveCollections () =
+        coroutine {
+            GlobalVariables.all_track_collections.Clear()
+            // TODO cache the collections builders
+            let collections = TrackCollectionRegistrationEvent.EVENT.invoker.OnRegisterCollections()
+
+            for index, collection in Seq.indexed collections do
+                let! resolved = collection.Resolve(index)
+                GlobalVariables.all_track_collections.Add resolved
+
+            ()
+        }
+
     member _.Tracks = tracks
     member _.TracksByIndex = tracksByIndex
 
@@ -107,3 +144,6 @@ let load () =
 
 let loadAsync () =
     trackLoader.LoadTracksAsync()
+
+let loadCollectionsAsync () =
+    trackLoader.ResolveCollections()

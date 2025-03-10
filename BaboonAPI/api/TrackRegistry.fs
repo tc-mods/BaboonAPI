@@ -125,6 +125,23 @@ type public Graphable =
     /// <remarks>Implementations should return None if they don't have a graph</remarks>
     abstract CreateGraph: unit -> SongGraph option
 
+/// Track collection interface
+type TromboneCollection =
+    /// The tracks included in this collection
+    abstract tracks: TromboneTrack seq
+
+    /// Unique ID for this collection
+    abstract unique_id: string
+
+    /// Player-facing name of this collection
+    abstract name: string
+
+    /// Player-facing description of this collection
+    abstract description: string
+
+    /// Resolve this collection into a concrete collection
+    abstract Resolve: index: int -> YieldTask<TrackCollection>
+
 /// <summary>
 /// Event-based API for registering new tracks.
 /// </summary>
@@ -161,3 +178,15 @@ module TracksLoadedEvent =
             { new Listener with
                 member _.OnTracksLoaded tracks =
                     listeners |> Seq.iter (fun l -> l.OnTracksLoaded tracks) })
+
+/// Event fired to build collections
+module TrackCollectionRegistrationEvent =
+    type public Listener =
+        abstract OnRegisterCollections: unit -> TromboneCollection seq
+
+    /// Event bus
+    let EVENT =
+        EventFactory.create (fun listeners ->
+            { new Listener with
+                member _.OnRegisterCollections () =
+                    listeners |> Seq.collect (_.OnRegisterCollections()) })

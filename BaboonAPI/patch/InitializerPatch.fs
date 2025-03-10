@@ -88,20 +88,25 @@ module internal ModInitializer =
 
 [<HarmonyPatch(typeof<BrandingController>)>]
 type BrandingPatch() =
-    static let loadlevel_m = AccessTools.Method(typeof<SaverLoader>, "loadAllTrackMetadata")
+    static let loadtracks_m = AccessTools.Method(typeof<TrackCollections>, "buildTrackCollections")
 
     static member RunInitialize () =
         ModInitializer.Initialize()
 
-    // Remove SaverLoader.loadAllTrackMetadata() call, we need to patch it first
+    // Remove TrackCollections.buildTrackCollections() call, we need to patch it first
     [<HarmonyPatch("Start")>]
     [<HarmonyTranspiler>]
     static member PatchStart (instructions: CodeInstruction seq): CodeInstruction seq =
         CodeMatcher(instructions)
             .MatchForward(false, [|
-                CodeMatch (fun ins -> ins.Calls loadlevel_m)
+                CodeMatch OpCodes.Ldarg_0
+                CodeMatch OpCodes.Ldfld
+                CodeMatch OpCodes.Ldc_I4_0
+                CodeMatch (fun ins -> ins.Calls loadtracks_m)
             |])
+            .ThrowIfInvalid("Could not find TrackCollections#buildTrackCollections")
             // Run our initializer in here instead
+            .RemoveInstructions(3)
             .Set(OpCodes.Call, AccessTools.Method(typeof<BrandingPatch>, "RunInitialize"))
             .InstructionEnumeration()
 

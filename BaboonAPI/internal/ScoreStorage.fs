@@ -73,13 +73,18 @@ type TrackScores =
         { this with highestRank = highestRank
                     highScores = highScores }
 
+    member this.ToBaseGame () =
+        TrackScores(tracktag = this.trackref,
+                    letter_grade = rankString this.highestRank,
+                    scores = List.toArray this.highScores)
+
 let emptyScore = { trackref = ""; highestRank = None; highScores = [0; 0; 0; 0; 0] }
 
 type IScoreStorage =
     abstract Save : score: AchievedScore -> unit
 
     abstract Load : trackref: string -> TrackScores
-    
+
     abstract IsSaved : trackref: string -> bool
 
 [<Serializable>]
@@ -150,7 +155,7 @@ type BaseTrackScoreStorage(trackrefs: string list) =
     let findEmptySlot () =
         GlobalVariables.localsave.data_trackscores
         |> Seq.tryFindIndex (fun s -> s = null || s[0] = "")
-        
+
     let backupSaveSlot (slot: int) =
         let savePath = $"{Application.persistentDataPath}/tchamp_savev100_{slot}.dat"
         let backupPath = $"{Application.persistentDataPath}/baboonapi_{slot}_backup_firstrun.bak"

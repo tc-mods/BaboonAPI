@@ -1,7 +1,5 @@
 ﻿namespace BaboonAPI.Patch
 
-open System
-open System.Reflection.Emit
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
 open BepInEx.Logging
@@ -98,57 +96,3 @@ type TrackLoaderPatch() =
         GlobalVariables.chosen_track <- trackref
         GlobalVariables.chosen_track_data <- TrackrefAccessor.fetchChosenTrack trackref
         false
-
-[<HarmonyPatch>]
-type TrackTitlePatches() =
-    static let tracktitles_f = AccessTools.Field(typeof<GlobalVariables>, nameof GlobalVariables.data_tracktitles)
-
-    [<HarmonyTranspiler>]
-    [<HarmonyPatch(typeof<LevelSelectController>, "Start")>]
-    static member Transpiler(instructions: CodeInstruction seq): CodeInstruction seq =
-        let matcher =
-            CodeMatcher(instructions)
-                .MatchForward(true, [|
-                    CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
-                    CodeMatch OpCodes.Ldlen
-                    CodeMatch ()
-                    CodeMatch (fun ins -> ins.Branches () |> fst)
-                |])
-                .ThrowIfInvalid("Could not find end of injection point in LevelSelectController#Start")
-
-        let endPos = matcher.Pos
-        let branch =
-            match matcher.Instruction.Branches() with
-            | true, b -> b.Value
-            | false, _ -> raise (InvalidOperationException "Could not find branching instruction of for loop in LevelSelectController#Start")
-
-        let startPos =
-            matcher
-                .SearchBack(fun ins -> ins.labels.Contains branch)
-                .ThrowIfInvalid("Could not find start of injection point in LevelSelectController#Start")
-                .Pos - 3
-
-        matcher
-            .RemoveInstructionsInRange(startPos, endPos) // Remove the for loop
-            .Start()
-            .Advance(startPos) // Go to where the for loop used to be
-            .InsertAndAdvance([|
-                CodeInstruction OpCodes.Ldarg_0
-                CodeInstruction OpCodes.Ldarg_0
-                CodeInstruction.LoadField(typeof<LevelSelectController>, "alltrackslist")
-                CodeInstruction.Call(typeof<TrackrefAccessor>, "doLevelSelectStart",
-                               [| typeof<LevelSelectController>; typeof<ResizeArray<SingleTrackData>> |])
-
-                // populate song graphs
-                CodeInstruction OpCodes.Ldarg_0
-                CodeInstruction.Call(typeof<TrackrefAccessor>, "populateSongGraphs")
-                CodeInstruction.StoreField(typeof<LevelSelectController>, "songgraphs")
-            |])
-            .MatchForward(false, [|
-                CodeMatch(fun ins -> ins.LoadsField(tracktitles_f))
-                CodeMatch OpCodes.Ldlen
-            |])
-            .ThrowIfInvalid("Could not find data_tracktitles length lookup in LevelSelectController#Start")
-            .SetInstructionAndAdvance(CodeInstruction OpCodes.Ldc_I4_0) // "j < 0"; set for loop to not iterate
-            .RemoveInstruction() // remove ldlen
-            .InstructionEnumeration()

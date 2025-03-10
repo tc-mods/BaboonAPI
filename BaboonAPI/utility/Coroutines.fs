@@ -56,6 +56,9 @@ let public awaitAssetBundle : op: AssetBundleCreateRequest -> _ =
 let public awaitResource : op: ResourceRequest -> _ =
     awaitAsyncOperation (fun op -> op.asset)
 
+/// Create a YieldTask that returns its result immediately
+let public sync (cb: unit -> 't) = YieldTask(null, cb)
+
 type CoroutineBuilder() =
     member _.Yield (yi: YieldInstruction) = Seq.singleton yi
     member _.Yield (yi: CustomYieldInstruction) =

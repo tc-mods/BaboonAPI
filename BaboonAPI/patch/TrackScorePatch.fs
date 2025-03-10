@@ -1,6 +1,5 @@
 ﻿namespace BaboonAPI.Patch
 
-open System.Reflection.Emit
 open BaboonAPI.Internal.ScoreStorage
 open HarmonyLib
 open UnityEngine
@@ -44,14 +43,14 @@ type private TrackScoresAccessor() =
 type TrackScorePatches() =
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<LevelSelectController>, "checkForS")>]
-    static member CheckForS(tag: string, __result: bool outref) =
-        __result <- TrackScoresUtility.checkForS tag
+    static member CheckForS(trackData: SingleTrackData, __result: bool outref) =
+        __result <- TrackScoresUtility.checkForS trackData.trackref
         false
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<LevelSelectController>, "pullLetterScore")>]
-    static member PullLetterScore(tag: string, __result: string outref) =
-        __result <- TrackScoresUtility.pullLetterScore tag
+    static member PullLetterScore(trackData: SingleTrackData, __result: string outref) =
+        __result <- TrackScoresUtility.pullLetterScore trackData.trackref
         false
 
     [<HarmonyPrefix>]
@@ -71,61 +70,31 @@ type TrackScorePatches() =
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<SaverLoader>, "grabHighestScore")>]
-    static member GrabHighestScore(songtag: string, __result: int outref) =
-        __result <- (TrackScoresUtility.get songtag).highScores.Head
+    static member GrabHighestScore(track: SingleTrackData, __result: int outref) =
+        __result <- (TrackScoresUtility.get track.trackref).highScores.Head
         false
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<SaverLoader>, "checkForUpdatedScore")>]
-    static member UpdateScore(songtag: string, newscore: int, newletterscore: string) =
+    static member UpdateScore(played_track: SingleTrackData, newscore: int, newletterscore: string) =
         let newRank = Rank.from newletterscore
-        let score = { trackref = songtag
+        let score = { trackref = played_track.trackref
                       rank = newRank.Value
                       score = newscore }
 
-        TrackScoresUtility.put songtag score
+        TrackScoresUtility.put played_track.trackref score
 
         false
 
-    [<HarmonyTranspiler>]
-    [<HarmonyPatch(typeof<LevelSelectController>, "populateScores")>]
-    static member PatchPopulateScores(instructions: CodeInstruction seq): CodeInstruction seq =
-        let matcher = CodeMatcher(instructions)
+    [<HarmonyPrefix>]
+    [<HarmonyPatch(typeof<SaverLoader>, "loadAllSaveHighScores")>]
+    static member PatchPopulateScores() =
+        GlobalVariables.localsave_scores <-
+            allTrackScores()
+            |> Seq.map _.ToBaseGame()
+            |> ResizeArray
 
-        let startIndex =
-            matcher.MatchForward(false, [|
-                CodeMatch (fun ins -> ins.LoadsConstant 0L)
-                CodeMatch OpCodes.Stloc_2
-                CodeMatch OpCodes.Br
-            |]).ThrowIfInvalid("Could not find start of for loop in LevelSelectController#populateScores").Pos
-
-        let endIndex =
-            matcher.MatchForward(true, [|
-                CodeMatch OpCodes.Ldloc_3
-                CodeMatch (fun ins -> ins.LoadsConstant 7L)
-                CodeMatch OpCodes.Blt
-            |]).ThrowIfInvalid("Could not find end of 2nd for loop in LevelSelectController#populateScores").Pos
-
-        matcher
-            .RemoveInstructionsInRange(startIndex, endIndex)
-            .Start()
-            .Advance(startIndex)
-            .InsertAndAdvance([|
-                CodeInstruction OpCodes.Ldarg_0 // wait for it...
-                CodeInstruction OpCodes.Ldarg_0
-                CodeInstruction.LoadField(typeof<LevelSelectController>, "alltrackslist")
-                CodeInstruction OpCodes.Ldarg_0
-                CodeInstruction.LoadField(typeof<LevelSelectController>, "songindex")
-                CodeInstruction.Call(typeof<ResizeArray<SingleTrackData>>, "get_Item", [| typeof<int32> |])
-                    |> (fun ins -> ins.opcode <- OpCodes.Callvirt; ins)
-                CodeInstruction.LoadField(typeof<SingleTrackData>, "trackref")
-                CodeInstruction OpCodes.Dup
-                CodeInstruction.Call(typeof<TrackScoresAccessor>, "fetchHighScoresFormatted")
-                CodeInstruction OpCodes.Stloc_1
-                CodeInstruction.Call(typeof<TrackScoresAccessor>, "fetchHighestScore")
-                CodeInstruction.StoreField(typeof<LevelSelectController>, "highestscore") // ... there it is!
-            |])
-            .InstructionEnumeration()
+        false
 
     [<HarmonyPrefix>]
     [<HarmonyPatch(typeof<LatchController>, "getNumberOfSScores")>]
