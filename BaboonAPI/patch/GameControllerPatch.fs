@@ -3,6 +3,7 @@
 open System.Reflection.Emit
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
+open BaboonAPI.Utility
 open BepInEx.Logging
 open HarmonyLib
 open UnityEngine
@@ -39,12 +40,25 @@ type private GameControllerExtension() =
                 track.LoadTrack()
 
         if not instance.freeplay then
-            let audio = l.LoadAudio()
-            instance.musictrack.clip <- audio.Clip
-            instance.musictrack.volume <- audio.Volume * GlobalVariables.localsettings.maxvolume_music
+            let onAudioLoaded (audio: TrackAudio) =
+                instance.musictrack.clip <- audio.Clip
+                instance.musictrack_cliplength <- audio.Clip.length
+                instance.musictrack.volume <- audio.Volume * GlobalVariables.localsettings.maxvolume_music
 
-            if GlobalVariables.turbomode then
-                instance.musictrack.pitch <- 2f
+                if GlobalVariables.turbomode then
+                    instance.musictrack.pitch <- 2f
+
+            match l with
+            | :? AsyncAudioAware as aaa ->
+                aaa.LoadAudio()
+                |> Coroutines.each (fun r ->
+                    match r with
+                    | Ok audio -> onAudioLoaded audio
+                    | Error err -> logger.LogError $"Failed to load audio: {err}")
+                |> instance.StartCoroutine
+                |> ignore
+            | _ ->
+                onAudioLoaded (l.LoadAudio())
 
         let context = BackgroundContext instance
         let bgObj = Object.Instantiate<GameObject>(
@@ -83,7 +97,7 @@ type private GameControllerExtension() =
 
     static member LoadChart(trackref: string): SavedLevel =
         (TrackAccessor.fetchTrack trackref).LoadChart()
-        
+
     static member PauseTrack (controller: PauseCanvasController) =
         match loadedTrack with
         | Some (:? PauseAware as pa) ->
@@ -219,7 +233,7 @@ type PausePatches() =
     static member PausePostfix(__instance: PauseCanvasController) =
         GameControllerExtension.PauseTrack __instance
         ()
-    
+
     [<HarmonyPostfix>]
     [<HarmonyPatch(typeof<PauseCanvasController>, "resumeFromPause")>]
     static member ResumePostfix(__instance: PauseCanvasController) =

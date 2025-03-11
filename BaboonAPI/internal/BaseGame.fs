@@ -5,7 +5,6 @@ open System.Runtime.Serialization.Formatters.Binary
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Hooks.Tracks.Collections
 open BaboonAPI.Internal
-open BaboonAPI.Utility
 open BaboonAPI.Utility.Coroutines
 open BaboonAPI.Utility.Unity
 open UnityEngine
@@ -75,7 +74,7 @@ type public BaseGameTrack internal (data: SavedLevelMetadata, trackref: string) 
             let path = $"{trackPath}/sample.ogg"
 
             loadAudioClip (path, AudioType.OGGVORBIS)
-            |> (Coroutines.map << Result.map) (fun audioClip -> { Clip = audioClip; Volume = 0.9f })
+            |> (map << Result.map) (fun audioClip -> { Clip = audioClip; Volume = 0.9f })
 
     interface Graphable with
         member this.CreateGraph() =
@@ -93,7 +92,7 @@ type internal BaseGameCollectionSprites(sprites: Sprite array) =
     member _.allTracks = sprites[4]
 
 type internal BaseGameTrackCollection(localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
-    inherit LazyTromboneCollection("default", localizer.getLocalizedText("collections_name_default"), localizer.getLocalizedText("collections_desc_default"))
+    inherit BaseTromboneCollection("default", localizer.getLocalizedText("collections_name_default"), localizer.getLocalizedText("collections_desc_default"))
 
     override this.LoadSprite() =
         sync (fun () -> Ok sprites.baseGame)
@@ -104,7 +103,7 @@ type internal BaseGameTrackCollection(localizer: StringLocalizer, sprites: BaseG
         |> Seq.filter (fun t -> t :? BaseGameTrack)
 
 type internal AllTracksCollection(localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
-    inherit LazyTromboneCollection("all", localizer.getLocalizedText("collections_name_all"), localizer.getLocalizedText("collections_desc_all"))
+    inherit BaseTromboneCollection("all", localizer.getLocalizedText("collections_name_all"), localizer.getLocalizedText("collections_desc_all"))
 
     override this.LoadSprite() =
         sync (fun () -> Ok sprites.allTracks)
@@ -114,7 +113,7 @@ type internal AllTracksCollection(localizer: StringLocalizer, sprites: BaseGameC
         |> Seq.map _.track
 
 type internal FavoriteTracksCollection(localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
-    inherit LazyTromboneCollection("favorites", localizer.getLocalizedText("collections_name_favorites"), localizer.getLocalizedText("collections_desc_favorites"))
+    inherit BaseTromboneCollection("favorites", localizer.getLocalizedText("collections_name_favorites"), localizer.getLocalizedText("collections_desc_favorites"))
 
     override this.LoadSprite() =
         sync (fun () -> Ok sprites.favorites)

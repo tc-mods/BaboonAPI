@@ -3,6 +3,7 @@
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
 open BaboonAPI.Internal.BaseGame
+open BaboonAPI.Internal.Tootmaker
 open HarmonyLib
 open UnityEngine
 
@@ -11,9 +12,15 @@ type LoaderPatch() =
     [<HarmonyPrefix>]
     [<HarmonyPatch("buildTrackCollections")>]
     static member PatchCollectionSetup (__instance: TrackCollections, ___string_localizer: StringLocalizer, ___collection_art_defaults: Sprite array) =
-        let path = $"{Application.streamingAssetsPath}/trackassets"
+        let basePath = $"{Application.streamingAssetsPath}/trackassets"
         let sprites = BaseGameCollectionSprites ___collection_art_defaults
-        let registry = BaseGameTrackRegistry (path, ___string_localizer, sprites)
+
+        let registry = BaseGameTrackRegistry (basePath, ___string_localizer, sprites)
+        TrackRegistrationEvent.EVENT.Register registry
+        TrackCollectionRegistrationEvent.EVENT.Register registry
+
+        let tootmakerPath = GlobalVariables.localsettings.collections_path_tootmaker
+        let registry = TootmakerTrackRegistry (tootmakerPath, ___string_localizer, sprites)
         TrackRegistrationEvent.EVENT.Register registry
         TrackCollectionRegistrationEvent.EVENT.Register registry
 

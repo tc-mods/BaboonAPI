@@ -7,10 +7,14 @@ open UnityEngine
 
 /// <summary>A lazily-resolved track collection</summary>
 [<AbstractClass>]
-type public LazyTromboneCollection(id: string, name: string, description: string) =
+type public BaseTromboneCollection(id: string, name: string, description: string) =
     abstract BuildTrackList: unit -> TromboneTrack seq
 
     abstract LoadSprite: unit -> YieldTask<Result<Sprite, string>>
+
+    /// Displayed on the collection settings screen
+    abstract folder: string
+    default _.folder = ""
 
     interface TromboneCollection with
         member this.unique_id = id
@@ -40,6 +44,7 @@ type public LazyTromboneCollection(id: string, name: string, description: string
                     _art = art,
                     _runtime = runtime,
                     _trackcount = tracks.Count,
+                    _folder = this.folder,
                     all_tracks = tracks
                 )
             )

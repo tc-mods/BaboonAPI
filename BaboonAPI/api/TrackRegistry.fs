@@ -89,6 +89,11 @@ type public PauseAware =
     /// Called when this track is resumed (after the countdown).
     abstract OnResume: PauseContext -> unit
 
+/// LoadedTromboneTrack extension to support async audio loading
+type public AsyncAudioAware =
+    /// Load the audio clip for this song asynchronously
+    abstract LoadAudio: unit -> YieldTask<Result<TrackAudio, string>>
+
 /// TromboneTrack extension for preview clips
 type public Previewable =
     /// <summary>Called when attempting to load a clip for preview.</summary>
