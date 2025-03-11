@@ -22,10 +22,6 @@ type LoaderPatch() =
     [<HarmonyPrefix>]
     [<HarmonyPatch("rebuildCustomTrackCollections")>]
     static member PatchCollectionReload (__instance: TrackCollections) =
-        TrackAccessor.loadCollectionsAsync()
-        |> __instance.StartCoroutine
-        |> ignore
-
         false
 
 

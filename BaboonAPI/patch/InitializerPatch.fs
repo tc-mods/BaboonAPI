@@ -32,21 +32,8 @@ module internal ModInitializer =
             rect.pivot <- Vector2(0f, 0f)
             rect.anchorMin <- Vector2(0f, 0f)
             rect.anchorMax <- Vector2(1f, 1f)
-            rect.offsetMin <- Vector2(10f, -50f)
+            rect.offsetMin <- Vector2(10f, 30f)
             rect.offsetMax <- Vector2(250f, 30f)
-
-            LeanTween.value(-50f, 30f, 0.5f)
-                .setEaseInOutQuad()
-                .setOnUpdate(fun (value: float32) ->
-                    rect.offsetMin <- Vector2(10f, value))
-                |> ignore
-
-            LeanTween.value(10f, -500f, 0.5f)
-                .setEaseOutQuad()
-                .setDelay(5.5f)
-                .setOnUpdate(fun (value: float32) ->
-                    rect.offsetMin <- Vector2(value, 30f))
-                |> ignore
 
             initialized <- Success
             if GlobalVariables.skipbrandingscreen then
@@ -114,7 +101,12 @@ type SafeguardPatch() =
     static member KillPrefix (__instance: BrandingController) =
         // If initialization fails, don't run killandload
         // Extra safeguard against mods calling killandload or base game changes
-        ModInitializer.GetStatus() = ModInitializer.Success
+        match ModInitializer.GetStatus() with
+        | ModInitializer.Success -> true
+        | ModInitializer.Failed -> false
+        | ModInitializer.NotRun ->
+            __instance.failed_to_load_error.SetActive true
+            false
 
 [<HarmonyPatch(typeof<BrandingController>)>]
 type BrandingPatch() =
@@ -148,5 +140,6 @@ type BrandingPatch() =
                 CodeMatch OpCodes.Call
             |])
             .ThrowIfInvalid("Could not find Invoke(\"doHolyWowAnim\")")
-            .RemoveInstructions(4)
+            .SetAndAdvance(OpCodes.Ret, null)
+            .RemoveInstructions(3)
             .InstructionEnumeration()
