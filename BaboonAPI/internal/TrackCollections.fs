@@ -8,8 +8,10 @@ open UnityEngine
 /// <summary>A lazily-resolved track collection</summary>
 [<AbstractClass>]
 type public BaseTromboneCollection(id: string, name: string, description: string) =
+    /// Resolve this collection's list of tracks.
     abstract BuildTrackList: unit -> TromboneTrack seq
 
+    /// Load the icon for this collection, to be displayed on the collection selector
     abstract LoadSprite: unit -> YieldTask<Result<Sprite, string>>
 
     /// Displayed on the collection settings screen

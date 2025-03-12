@@ -10,6 +10,7 @@ open BaboonAPI.Utility.Coroutines
 open Newtonsoft.Json
 open UnityEngine
 
+/// A loaded base-game custom track
 type public LoadedTootmakerTrack internal (trackref: string, folderPath: string) =
     interface LoadedTromboneTrack with
         member this.trackref = trackref
@@ -45,6 +46,7 @@ type public LoadedTootmakerTrack internal (trackref: string, folderPath: string)
             | None ->
                 sync (fun () -> Error "Could not find valid audio file")
 
+/// A base-game custom track
 type public TootmakerTrack internal (data: SongDataCustom, folderPath: string) =
     interface TromboneTrack with
         member _.trackname_short = data.shortName
