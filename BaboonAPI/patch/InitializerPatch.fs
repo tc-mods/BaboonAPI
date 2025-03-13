@@ -52,8 +52,9 @@ module internal ModInitializer =
                 ""
                 $"<color=#CCCCCC>{err.Message}</color>"
                 ""
-                "Make sure your mods are up to date too!"
-                $"(source: <color=#23FFFF>{err.PluginInfo.Location}</color>)"
+                "Make sure your mods are up to date!"
+                "<color=#CCCCCC>Offending mod DLL:</color>"
+                $"<color=#23FFFF>{err.PluginInfo.Location}</color>"
             ]
 
             bc.epwarningcg.gameObject.SetActive false
@@ -80,19 +81,22 @@ type SafeguardPatch() =
     [<HarmonyPatch("Start")>]
     [<HarmonyPrefix>]
     static member Prefix (__instance: BrandingController) =
-        let failtxt = __instance.failed_to_load_error.transform.Find("full_text").GetComponent<Text>()
-        failtxt.verticalOverflow <- VerticalWrapMode.Overflow
-        failtxt.alignment <- TextAnchor.UpperLeft
-        failtxt.rectTransform.sizeDelta <- Vector2(980f, 365f)
-        failtxt.text <- String.concat "\n" [
-            "<size=27>Uh oh</size>"
-            "BaboonAPI's initializer event didn't fire! One of several things may have happened:"
-            "1. Trombone Champ updated and our initializer patch broke"
-            "2. Another mod is interfering with BaboonAPI, probably by accident"
-            "3. The evil doppelgänger <color=#F3385A>Trazom</color> is attempting to break your game"
-            ""
-            "Try updating your mods or disabling some temporarily?"
-        ]
+        try
+            let failtxt = __instance.failed_to_load_error.transform.Find("full_text").GetComponent<Text>()
+            failtxt.verticalOverflow <- VerticalWrapMode.Overflow
+            failtxt.alignment <- TextAnchor.UpperLeft
+            failtxt.rectTransform.sizeDelta <- Vector2(980f, 365f)
+            failtxt.text <- String.concat "\n" [
+                "<size=27>Uh oh</size>"
+                "BaboonAPI's initializer event didn't fire! One of several things may have happened:"
+                "1. Trombone Champ updated and our initializer patch broke"
+                "2. Another mod is interfering with BaboonAPI, probably by accident"
+                "3. The evil doppelgänger <color=#F3385A>Trazom</color> is attempting to break your game"
+                ""
+                "Try updating your mods or disabling some temporarily?"
+            ]
+        with
+        | _ -> ()  // Ignore any errors here, fall back to base game failure text
 
         true
 
@@ -111,6 +115,7 @@ type SafeguardPatch() =
 [<HarmonyPatch(typeof<BrandingController>)>]
 type BrandingPatch() =
     static let loadtracks_m = AccessTools.Method(typeof<TrackCollections>, "buildTrackCollections")
+    static let failtxt_f = AccessTools.Field(typeof<BrandingController>, "failed_to_load_error")
 
     static member RunInitialize (instance: BrandingController) =
         ModInitializer.Initialize instance
@@ -129,10 +134,19 @@ type BrandingPatch() =
                 CodeMatch (fun ins -> ins.Calls loadtracks_m)
             |])
             .ThrowIfInvalid("Could not find TrackCollections#buildTrackCollections")
-            // Run our initializer in here instead
+            .RemoveInstructions(4)
+            .MatchForward(true, [|
+                CodeMatch OpCodes.Ldarg_0
+                CodeMatch (fun ins -> ins.LoadsField failtxt_f)
+                CodeMatch OpCodes.Ldc_I4_0
+                CodeMatch OpCodes.Callvirt
+            |])
+            .ThrowIfInvalid("Could not find failed_to_load_error#SetActive")
             .Advance(1)
-            .RemoveInstructions(2)
-            .Set(OpCodes.Call, AccessTools.Method(typeof<BrandingPatch>, "RunInitialize"))
+            .InsertAndAdvance([|
+                CodeInstruction OpCodes.Ldarg_0
+                CodeInstruction.Call(typeof<BrandingPatch>, "RunInitialize")
+            |])
             .MatchForward(false, [|
                 CodeMatch OpCodes.Ldarg_0
                 CodeMatch (OpCodes.Ldstr, "doHolyWowAnim")

@@ -42,7 +42,7 @@ type private GameControllerExtension() =
         if not instance.freeplay then
             let onAudioLoaded (audio: TrackAudio) =
                 instance.musictrack.clip <- audio.Clip
-                instance.musictrack_cliplength <- audio.Clip.length
+                // instance.musictrack_cliplength <- audio.Clip.length
                 instance.musictrack.volume <- audio.Volume * GlobalVariables.localsettings.maxvolume_music
 
                 if GlobalVariables.turbomode then

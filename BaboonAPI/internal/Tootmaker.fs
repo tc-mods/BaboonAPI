@@ -1,5 +1,6 @@
 ﻿namespace BaboonAPI.Internal.Tootmaker
 
+open System.Collections
 open System.IO
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Hooks.Tracks.Collections
@@ -7,11 +8,14 @@ open BaboonAPI.Internal
 open BaboonAPI.Internal.BaseGame
 open BaboonAPI.Utility
 open BaboonAPI.Utility.Coroutines
+open HarmonyLib
 open Newtonsoft.Json
 open UnityEngine
 
 /// A loaded base-game custom track
 type public LoadedTootmakerTrack internal (trackref: string, folderPath: string) =
+    static let load_bg_m = AccessTools.Method(typeof<GameController>, "loadCustomBG")
+
     interface LoadedTromboneTrack with
         member this.trackref = trackref
 
@@ -21,7 +25,7 @@ type public LoadedTootmakerTrack internal (trackref: string, folderPath: string)
             failwith "crimes have occurred"
 
         member this.SetUpBackgroundDelayed controller bg =
-            controller.StartCoroutine(controller.gamecontroller.loadCustomBG()) |> ignore
+            controller.StartCoroutine(unbox<IEnumerator> (load_bg_m.Invoke (controller.gamecontroller, [|null|]))) |> ignore
 
         member this.Dispose() =
             ()
@@ -29,10 +33,10 @@ type public LoadedTootmakerTrack internal (trackref: string, folderPath: string)
     interface AsyncAudioAware with
         member this.LoadAudio() =
             let extensions = [
-                ".ogg", AudioType.OGGVORBIS
-                ".mp3", AudioType.MPEG
-                ".wav", AudioType.WAV
-                ".aiff", AudioType.AIFF
+                "ogg", AudioType.OGGVORBIS
+                "mp3", AudioType.MPEG
+                "wav", AudioType.WAV
+                "aiff", AudioType.AIFF
             ]
             let path =
                 extensions
@@ -45,6 +49,11 @@ type public LoadedTootmakerTrack internal (trackref: string, folderPath: string)
                 |> (map << Result.map) (fun clip -> { Clip = clip; Volume = 1f })
             | None ->
                 sync (fun () -> Error "Could not find valid audio file")
+
+    interface PauseAware with
+        member this.CanResume = true
+        member this.OnPause ctx = ()
+        member this.OnResume ctx = ()
 
 /// A base-game custom track
 type public TootmakerTrack internal (data: SongDataCustom, folderPath: string) =
@@ -60,8 +69,8 @@ type public TootmakerTrack internal (data: SongDataCustom, folderPath: string) =
         member _.length = Mathf.FloorToInt(data.endpoint / (data.tempo / 60f))
         member _.tempo = int data.tempo
 
-        member this.IsVisible() = true
-        member this.LoadChart() =
+        member _.IsVisible() = true
+        member _.LoadChart() =
             SavedLevel(
                 savedleveldata = ResizeArray(data.notes),
                 bgdata = ResizeArray(data.bgdata),
@@ -76,10 +85,10 @@ type public TootmakerTrack internal (data: SongDataCustom, folderPath: string) =
                 timesig = data.timesig
             )
 
-        member this.LoadTrack() = new LoadedTootmakerTrack(data.trackRef, folderPath)
+        member _.LoadTrack() = new LoadedTootmakerTrack(data.trackRef, folderPath)
 
     interface Previewable with
-        member this.LoadClip() =
+        member _.LoadClip() =
             let clipPath = Path.Combine(folderPath, "preview.ogg")
             if File.Exists clipPath then
                 Unity.loadAudioClip (clipPath, AudioType.OGGVORBIS)
@@ -87,10 +96,13 @@ type public TootmakerTrack internal (data: SongDataCustom, folderPath: string) =
             else
                 sync (fun () -> Error "No preview.ogg available")
 
+    interface FilesystemTrack with
+        member _.folderPath = folderPath
+
 type internal TootmakerCollection(folderPath: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
     inherit BaseTromboneCollection("tootmaker", localizer.getLocalizedText("collections_name_tootmaker"), localizer.getLocalizedText("collections_desc_tootmaker"))
 
-    override _.folder = folderPath
+    override _.folder = Path.GetFileName(folderPath.TrimEnd('/', '\\'))
     override _.LoadSprite() = sync(fun () -> Ok sprites.tootmaker)
     override this.BuildTrackList() =
         TrackAccessor.allTracks()
@@ -100,7 +112,7 @@ type internal TootmakerCollection(folderPath: string, localizer: StringLocalizer
 type internal CustomCollection(folderPath: string, trackRefs: string list, meta: TrackCollections.ExternalCollectionMetadata, sprites: BaseGameCollectionSprites) =
     inherit BaseTromboneCollection(Hash128.Compute(folderPath).ToString(), meta.name, meta.description)
 
-    override _.folder = folderPath
+    override _.folder = Path.GetFileName(folderPath.TrimEnd('/', '\\'))
 
     override this.LoadSprite() =
         let spritePaths = ["cover.png"; "cover.jpg"] |> List.map (fun name -> Path.Combine(folderPath, name))

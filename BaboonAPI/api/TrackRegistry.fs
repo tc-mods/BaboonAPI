@@ -108,6 +108,11 @@ type public Sortable =
     /// Sort order for this track
     abstract sortOrder: int
 
+/// TromboneTrack extension to indicate a track loaded from the local filesystem
+type public FilesystemTrack =
+    /// The full path to the local filesystem folder this track is stored in
+    abstract folderPath: string
+
 /// Represents a song graph
 type public SongGraph =
     { fury: int

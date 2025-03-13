@@ -83,6 +83,14 @@ type CoroutineBuilder() =
                 expr.Dispose()
         }
 
+    member _.TryWith (syi: YieldInstruction seq, onException: exn -> YieldInstruction seq) =
+        seq {
+            try
+                yield! syi
+            with
+            | err -> yield! onException err
+        }
+
     member _.For (expr: 'a seq, binder: 'a -> YieldInstruction seq) = Seq.collect binder expr
 
     member _.While (predicate: unit -> bool, body: YieldInstruction seq) =

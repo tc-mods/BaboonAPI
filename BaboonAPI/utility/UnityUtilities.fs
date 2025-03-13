@@ -49,3 +49,58 @@ let public loadTexture (path: string) =
 /// Send a web request and map the result
 let public makeRequest (binder: UnityWebRequestAsyncOperation -> 'a) (www: UnityWebRequest) =
     awaitAsyncOperation (mapResult binder) (www.SendWebRequest ())
+
+type UnityTaskBuilder(behaviour: MonoBehaviour) =
+    member _.Yield (yi: YieldInstruction) =
+        YieldTask(yi, id)
+
+    member _.Bind (src: YieldTask<'a>, binder: 'a -> YieldTask<'b>) =
+        let mutable result = None
+        let coro = behaviour.StartCoroutine(coroutine {
+            yield src.Coroutine
+            let next = binder(src.Result)
+            yield next.Coroutine
+            result <- Some next.Result
+        })
+
+        YieldTask(coro, fun () -> Option.get result)
+
+    member this.TryWith (delayed: unit -> YieldTask<'a>, binder: exn -> YieldTask<'a>) =
+        let mutable result = None
+        let coro = behaviour.StartCoroutine(coroutine {
+            try
+                let src = delayed()
+                yield src.Coroutine
+                result <- Some src.Result
+            with
+            | err ->
+                let src = binder err
+                yield src.Coroutine
+                result <- Some src.Result
+        })
+
+        YieldTask(coro, fun () -> Option.get result)
+
+    member _.Return (item: 'a) =
+        YieldTask(null, fun () -> item)
+
+    member _.ReturnFrom (task: YieldTask<'a>) = task
+
+    member _.Combine (a: YieldTask<'a>, b: unit -> YieldTask<'b>) =
+        let mutable result = None
+        let coro = behaviour.StartCoroutine(coroutine {
+            yield a.Coroutine
+
+            let src = b()
+            yield src.Coroutine
+            result <- Some src.Result
+        })
+
+        YieldTask(coro, fun () -> Option.get result)
+
+    member _.Zero () =
+        YieldTask(null, fun () -> ())
+
+    member _.Delay (binder: unit -> YieldTask<'a>) = binder
+
+let public task behaviour = UnityTaskBuilder behaviour

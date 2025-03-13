@@ -5,6 +5,7 @@ open System.Collections.Generic
 open BaboonAPI.Event
 open BaboonAPI.Utility.Coroutines
 open BepInEx
+open Microsoft.FSharp.Core
 open UnityEngine
 
 module private ResultExt =
@@ -72,6 +73,14 @@ module GameInitializationEvent =
         /// </returns>
         abstract Initialize: unit -> Result<unit, LoadError>
 
+    let rec private formatError (err: exn) =
+        let inner =
+            Option.ofObj err.InnerException
+            |> Option.map (fun i -> $"\n{formatError i}")
+            |> Option.defaultValue ""
+
+        $"{err.Message}{inner}"
+
     /// <summary>Wraps your initialization logic and catches any thrown exceptions.</summary>
     /// <remarks>
     /// An exception thrown in here will safely stop the game loading, and the error will be displayed to the user.
@@ -84,7 +93,7 @@ module GameInitializationEvent =
         with
         | err ->
             Debug.LogError err
-            Error { PluginInfo = info; Message = err.Message }
+            Error { PluginInfo = info; Message = (formatError err) }
 
     /// Event bus
     let EVENT = EventFactory.create(fun listeners ->

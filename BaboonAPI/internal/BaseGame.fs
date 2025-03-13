@@ -83,6 +83,9 @@ type public BaseGameTrack internal (data: SavedLevelMetadata, trackref: string) 
             | "einefinal" -> Some (SongGraph.all 104)
             | _ -> None
 
+    interface FilesystemTrack with
+        member _.folderPath = trackPath
+
 /// Base game has an array of sprites for its collections, this maps them to readable names
 type internal BaseGameCollectionSprites(sprites: Sprite array) =
     member _.baseGame = sprites[0]

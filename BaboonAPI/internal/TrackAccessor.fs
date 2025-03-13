@@ -29,6 +29,11 @@ let makeTrackData (track: TromboneTrack) (trackindex: int): SingleTrackData =
         | :? Sortable as sortable -> sortable.sortOrder
         | _ -> 999 + trackindex
 
+    let trackFolder =
+        match track with
+        | :? FilesystemTrack as fsi -> fsi.folderPath
+        | _ -> null
+
     let graph = makeSongGraph(track)
     let storage = ScoreStorage.getStorageFor track.trackref
     let favorites = GlobalVariables.localsave_favtracks
@@ -47,6 +52,7 @@ let makeTrackData (track: TromboneTrack) (trackindex: int): SingleTrackData =
                     graphpoints = graph,
                     is_favorite = favorites.Contains(track.trackref),
                     user_scores = storage.Load(track.trackref).ToBaseGame(),
+                    track_folder = trackFolder,
                     trackindex = trackindex)
 
 type RegisteredTrack =
@@ -84,6 +90,14 @@ type TrackLoader() =
         let allTracks = tracksByIndex |> Seq.map (fun rt -> rt.track) |> Seq.toList
         TracksLoadedEvent.EVENT.invoker.OnTracksLoaded allTracks
 
+    let collectionSorter (x: TromboneCollection) (y: TromboneCollection) =
+        if x.unique_id = "default" || y.unique_id = "all" then
+            -1
+        elif x.unique_id = "all" || y.unique_id = "default" then
+            1
+        else
+            x.name.CompareTo y.name
+
     member _.LoadTracks() =
         makeTrackLoader() |> onTracksLoaded
 
@@ -105,7 +119,9 @@ type TrackLoader() =
         coroutine {
             GlobalVariables.all_track_collections.Clear()
             // TODO cache the collections builders
-            let collections = TrackCollectionRegistrationEvent.EVENT.invoker.OnRegisterCollections()
+            let collections =
+                TrackCollectionRegistrationEvent.EVENT.invoker.OnRegisterCollections()
+                |> Seq.sortWith collectionSorter
 
             for index, collection in Seq.indexed collections do
                 let! resolved = collection.Resolve(index)
