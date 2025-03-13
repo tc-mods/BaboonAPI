@@ -27,6 +27,7 @@ type BaboonPlugin() =
     member this.TryLoadTracksAsync = Unity.task this {
         try
             yield TrackAccessor.loadAsync() |> this.StartCoroutine
+            ScoreStorage.baseGameStorage |> Option.iter (_.firstTimeBackup())
             return Ok ()
         with
         | TrackAccessor.DuplicateTrackrefException trackref ->
@@ -37,21 +38,6 @@ type BaboonPlugin() =
             return Error { PluginInfo = this.Info
                            Message = msg }
     }
-
-    member this.TryLoadTracks() =
-        try
-            TrackAccessor.load()
-            // First-time backup.
-            ScoreStorage.baseGameStorage |> Option.iter (_.firstTimeBackup())
-            Ok(())
-        with
-        | TrackAccessor.DuplicateTrackrefException trackref ->
-            let msg = String.concat "\n" [
-                $"Duplicate tracks found with track ID '{trackref}'"
-                "Please check your songs folder for duplicates!"
-            ]
-            Error { PluginInfo = this.Info
-                    Message = msg }
 
     interface GameInitializationEvent.Listener with
         member this.Initialize() =
@@ -67,6 +53,7 @@ type BaboonPlugin() =
                     typeof<LoaderPatch>
                     typeof<TrackLoadingPatch>
                     typeof<ReloadButtonPatch>
+                    typeof<LevelSelectPatch>
                     typeof<GameControllerPatch>
                     typeof<PausePatches>
                     typeof<PreviewPatch>

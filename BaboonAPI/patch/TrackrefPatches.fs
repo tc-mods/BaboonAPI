@@ -2,7 +2,6 @@
 
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
-open BepInEx.Logging
 open HarmonyLib
 open UnityEngine
 
@@ -47,47 +46,11 @@ type private LevelSelectReloadBehaviour() =
             | _ -> ()
 
 type private TrackrefAccessor() =
-    static let logger = Logger.CreateLogSource "BaboonAPI.TrackrefAccessor"
-
-    static let makeSongGraph (rt: TrackAccessor.RegisteredTrack) =
-        let generate _ =
-            Mathf.Clamp(rt.track.difficulty * 10 + Random.Range (-25, 5), 10, 104)
-
-        let graph =
-            match rt.track with
-            | :? Graphable as graphable ->
-                graphable.CreateGraph()
-            | _ -> None
-
-        match graph with
-        | Some g ->
-            g.asArray
-        | None ->
-            Array.init 5 generate
-
-    static member finalLevelIndex () = TrackAccessor.fetchTrackIndex "einefinal"
-
-    static member trackrefForIndex i = (TrackAccessor.fetchTrackByIndex i).trackref
-    static member trackTitleForIndex i = (TrackAccessor.fetchTrackByIndex i).trackname_long
-    static member trackDifficultyForIndex i = (TrackAccessor.fetchTrackByIndex i).difficulty
-    static member trackLengthForIndex i = (TrackAccessor.fetchTrackByIndex i).length
-    static member trackCount () = TrackAccessor.trackCount()
-
     static member fetchChosenTrack trackref =
         (TrackAccessor.fetchRegisteredTrack trackref).asTrackData
 
     static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: ResizeArray<SingleTrackData>) =
         instance.gameObject.AddComponent<LevelSelectReloadBehaviour>().Init(instance, alltrackslist)
-
-        TrackAccessor.allTracks()
-        |> Seq.filter (fun s -> s.track.IsVisible())
-        |> Seq.map (fun s -> s.asTrackData)
-        |> alltrackslist.AddRange
-
-    static member populateSongGraphs () =
-        TrackAccessor.allTracks()
-        |> Seq.map makeSongGraph
-        |> Array.ofSeq
 
 [<HarmonyPatch(typeof<SaverLoader>, "loadTrackData")>]
 type TrackLoaderPatch() =
@@ -95,4 +58,22 @@ type TrackLoaderPatch() =
     static member Prefix (trackref: string) =
         GlobalVariables.chosen_track <- trackref
         GlobalVariables.chosen_track_data <- TrackrefAccessor.fetchChosenTrack trackref
+        false
+
+[<HarmonyPatch(typeof<LevelSelectController>)>]
+type LevelSelectPatch() =
+    [<HarmonyPrefix>]
+    [<HarmonyPatch("checkForSongsToHide")>]
+    static member PatchSongsVisible (__instance: LevelSelectController, ___alltrackslist: ResizeArray<SingleTrackData>) =
+        let isStreamerMode trackref =
+            if GlobalVariables.localsettings.streamer_mode then
+                __instance.streaming_unfriendly_songs
+                |> Array.contains trackref
+            else false
+
+        ___alltrackslist.RemoveAll(fun track ->
+            let tt = TrackAccessor.fetchTrack track.trackref
+            not (tt.IsVisible()) || isStreamerMode track.trackref
+        ) |> ignore
+
         false
