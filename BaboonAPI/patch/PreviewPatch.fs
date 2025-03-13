@@ -11,11 +11,15 @@ open UnityEngine
 type PreviewPatch() =
     static let logger = Logger.CreateLogSource "BaboonAPI.PreviewPatch"
 
-    static let clip_volume_f = AccessTools.Field(typeof<LevelSelectClipPlayer>, "clip_volume")
+    static let clip_elapsed_f = AccessTools.Field(typeof<LevelSelectClipPlayer>, "counter_clip_play_duration")
+    static let clip_loaded_f = AccessTools.Field(typeof<LevelSelectClipPlayer>, "clip_loaded")
+    static let clip_volume_f = AccessTools.Field(typeof<LevelSelectClipPlayer>, "default_clip_volume")
     static let clip_player_f = AccessTools.Field(typeof<LevelSelectClipPlayer>, "clipPlayer")
     static let start_fade_m = AccessTools.Method(typeof<LevelSelectClipPlayer>, "startCrossFade")
 
     static let setClipAndFade (clip: TrackAudio) (player: LevelSelectClipPlayer) =
+        clip_loaded_f.SetValue (player, true)
+        clip_elapsed_f.SetValue (player, 0f)
         clip_volume_f.SetValue (player, clip.Volume)
 
         let clipPlayer: AudioSource = unbox (clip_player_f.GetValue player)
