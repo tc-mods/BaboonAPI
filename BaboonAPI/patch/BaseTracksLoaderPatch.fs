@@ -60,6 +60,12 @@ type LoaderPatch() =
     static member PatchCollectionReload (__instance: TrackCollections) =
         false
 
+    [<HarmonyPrefix>]
+    [<HarmonyPatch("buildFavoritesCollection")>]
+    static member PatchFavoritesReload (__instance: TrackCollections) =
+        TrackAccessor.updateCollections()
+        false
+
 
 [<HarmonyPatch(typeof<SaverLoader>, "loadAllSaveHighScores")>]
 type TrackLoadingPatch() =
