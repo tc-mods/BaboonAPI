@@ -23,8 +23,8 @@ type private BaseTracksLoaderAccessor =
 
     static member onClickReload (controller: HomeController) =
         controller.StartCoroutine(coroutine {
-            yield controller.StartCoroutine (TrackAccessor.loadAsync())
-            yield controller.StartCoroutine (TrackAccessor.loadCollectionsAsync())
+            let! _ = TrackAccessor.loadAsync() // TODO
+            yield controller.StartCoroutine(TrackAccessor.loadCollectionsAsync())
 
             controller.Invoke ("setCustomsPanelText", 0f)
 

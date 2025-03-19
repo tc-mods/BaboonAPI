@@ -50,57 +50,70 @@ let public loadTexture (path: string) =
 let public makeRequest (binder: UnityWebRequestAsyncOperation -> 'a) (www: UnityWebRequest) =
     awaitAsyncOperation (mapResult binder) (www.SendWebRequest ())
 
-type UnityTaskBuilder(behaviour: MonoBehaviour) =
+type UnityTaskBuilder() =
     member _.Yield (yi: YieldInstruction) =
-        YieldTask(yi, id)
+        YieldTask(Seq.singleton yi, id)
+
+    member _.Yield (yi: CustomYieldInstruction) =
+        let coro = seq {
+            while yi.MoveNext() do
+                yield yi.Current :?> YieldInstruction
+        }
+
+        YieldTask(coro, id)
 
     member _.Bind (src: YieldTask<'a>, binder: 'a -> YieldTask<'b>) =
+        bind binder src
+
+    member _.For (expr: 'a seq, binder: 'a -> YieldTask<'b>) =
         let mutable result = None
-        let coro = behaviour.StartCoroutine(coroutine {
-            yield src.Coroutine
-            let next = binder(src.Result)
-            yield next.Coroutine
-            result <- Some next.Result
-        })
+        let coro = seq {
+            for item in expr do
+                let src = binder(item)
+                yield! src.Coroutine
+                result <- Some src.Result
+        }
 
         YieldTask(coro, fun () -> Option.get result)
 
     member this.TryWith (delayed: unit -> YieldTask<'a>, binder: exn -> YieldTask<'a>) =
         let mutable result = None
-        let coro = behaviour.StartCoroutine(coroutine {
+        let coro = seq {
             try
                 let src = delayed()
-                yield src.Coroutine
+                yield! src.Coroutine
                 result <- Some src.Result
             with
             | err ->
                 let src = binder err
-                yield src.Coroutine
+                yield! src.Coroutine
                 result <- Some src.Result
-        })
+        }
 
         YieldTask(coro, fun () -> Option.get result)
 
     member _.Return (item: 'a) =
-        YieldTask(null, fun () -> item)
+        YieldTask(Seq.empty, fun () -> item)
 
     member _.ReturnFrom (task: YieldTask<'a>) = task
 
     member _.Combine (a: YieldTask<'a>, b: unit -> YieldTask<'b>) =
         let mutable result = None
-        let coro = behaviour.StartCoroutine(coroutine {
-            yield a.Coroutine
+        let coro = seq {
+            yield! a.Coroutine
 
             let src = b()
-            yield src.Coroutine
+            yield! src.Coroutine
             result <- Some src.Result
-        })
+        }
 
         YieldTask(coro, fun () -> Option.get result)
 
     member _.Zero () =
-        YieldTask(null, fun () -> ())
+        YieldTask(Seq.empty, fun () -> ())
 
     member _.Delay (binder: unit -> YieldTask<'a>) = binder
 
-let public task behaviour = UnityTaskBuilder behaviour
+    member _.Run (delayed: unit -> YieldTask<'a>) = delayed()
+
+let public task = UnityTaskBuilder()

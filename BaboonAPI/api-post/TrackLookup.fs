@@ -36,13 +36,18 @@ let public reload () =
 /// <returns>A Unity coroutine that must be started using StartCoroutine.</returns>
 let public reloadAsync () =
     TrackAccessor.loadAsync()
+    |> Coroutines.each ignore
 
 /// <summary>Reload the list of tracks and collections asynchronously.</summary>
 /// <returns>A Unity coroutine that must be started using StartCoroutine.</returns>
 let public reloadAllAsync (behaviour: MonoBehaviour) =
     Coroutines.coroutine {
-        yield behaviour.StartCoroutine(TrackAccessor.loadAsync())
-        yield behaviour.StartCoroutine(TrackAccessor.loadCollectionsAsync())
+        match! TrackAccessor.loadAsync() with
+        | Ok () ->
+            yield behaviour.StartCoroutine(TrackAccessor.loadCollectionsAsync())
+        | Error err ->
+            Debug.LogError err  // TODO
+            ()
     }
 
 /// Highest rank & most recent 5 high scores for a track

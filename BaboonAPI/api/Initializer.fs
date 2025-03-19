@@ -1,8 +1,8 @@
 ﻿namespace BaboonAPI.Hooks.Initializer
 
 open System
-open System.Collections.Generic
 open BaboonAPI.Event
+open BaboonAPI.Utility
 open BaboonAPI.Utility.Coroutines
 open BepInEx
 open Microsoft.FSharp.Core
@@ -22,21 +22,21 @@ module private ResultExt =
         | Some err -> Error err
         | None -> Ok ()
 
-    let runAsync (start: IEnumerator<YieldInstruction> -> Coroutine) (tasks: YieldTask<Result<unit, 'err>> seq) : YieldTask<Result<unit, 'err>> =
+    let runAsync (tasks: YieldTask<Result<unit, 'err>> seq) : YieldTask<Result<unit, 'err>> =
         let mutable error = None
 
         let coro =
-            coroutine {
+            Unity.task {
                 for entry in tasks do
                     if Option.isNone error then
                         match! entry with
                         | Ok () -> ()
                         | Error err -> error <- Some err
-            } |> start
+            }
 
-        YieldTask(coro, fun () ->
+        coro |> map (fun () ->
             match error with
-            | None -> Ok ()
+            | None -> Ok()
             | Some error -> Error error)
 
 /// Load error returned by plugins when they fail to load.
@@ -73,7 +73,7 @@ module GameInitializationEvent =
         /// </returns>
         abstract Initialize: unit -> Result<unit, LoadError>
 
-    let rec private formatError (err: exn) =
+    let rec internal formatError (err: exn) =
         let inner =
             Option.ofObj err.InnerException
             |> Option.map (fun i -> $"\n{formatError i}")
@@ -127,4 +127,4 @@ module AsyncGameInitializationEvent =
             override _.Initialize () =
                 listeners
                 |> Seq.map (_.Initialize())
-                |> ResultExt.runAsync GlobalVariables.track_collection_loader.StartCoroutine })
+                |> ResultExt.runAsync })

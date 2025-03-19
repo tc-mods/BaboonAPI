@@ -12,7 +12,7 @@ open UnityEngine
 ///  printf $"Loaded {assetBundle.name}"
 ///}</code>
 /// </remarks>
-type YieldTask<'r> internal (yi: YieldInstruction, supplier: unit -> 'r) =
+type YieldTask<'r> internal (yi: YieldInstruction seq, supplier: unit -> 'r) =
     member internal _.Coroutine = yi
     member internal _.Result : 'r = supplier()
 
@@ -33,7 +33,7 @@ type YieldTask<'r> internal (yi: YieldInstruction, supplier: unit -> 'r) =
     /// <param name="action">Consumer that will receive the task's result</param>
     member public this.ForEach (action: Action<'r>) =
         (seq {
-            yield this.Coroutine
+            yield! this.Coroutine
             action.Invoke this.Result
         }).GetEnumerator()
 
@@ -46,18 +46,18 @@ type YieldTask<'r> internal (yi: YieldInstruction, supplier: unit -> 'r) =
 
 /// Await an AsyncOperation
 let awaitAsyncOperation<'r, 'op when 'op :> AsyncOperation> (binder: 'op -> 'r) (op: 'op) =
-    YieldTask(op, fun () -> binder op)
+    YieldTask(Seq.singleton op, fun () -> binder op)
 
 /// Await an AssetBundleCreateRequest, returning the loaded AssetBundle
 let public awaitAssetBundle : op: AssetBundleCreateRequest -> _ =
-    awaitAsyncOperation (fun op -> op.assetBundle)
+    awaitAsyncOperation (_.assetBundle)
 
 /// Await a ResourceRequest, returning the loaded Unity Object
 let public awaitResource : op: ResourceRequest -> _ =
-    awaitAsyncOperation (fun op -> op.asset)
+    awaitAsyncOperation (_.asset)
 
 /// Create a YieldTask that returns its result immediately
-let public sync (cb: unit -> 't) = YieldTask(null, cb)
+let public sync (cb: unit -> 't) = YieldTask(Seq.empty, cb)
 
 type CoroutineBuilder() =
     member _.Yield (yi: YieldInstruction) = Seq.singleton yi
@@ -71,7 +71,7 @@ type CoroutineBuilder() =
 
     member _.Bind (src: YieldTask<'a>, binder: 'a -> YieldInstruction seq) =
         seq {
-            yield src.Coroutine // run the coroutine
+            yield! src.Coroutine // run the coroutine(s)
             yield! binder(src.Result) // then call the binder with the result
         }
 
@@ -114,10 +114,20 @@ let coroutine = CoroutineBuilder()
 let map (binder: 'a -> 'b) (task: YieldTask<'a>): YieldTask<'b> =
     YieldTask(task.Coroutine, fun () -> binder task.Result)
 
+/// Bind the result of one YieldTask to another
+let bind (binder: 'a -> YieldTask<'b>) (task: YieldTask<'a>): YieldTask<'b> =
+    let mutable result = None
+    YieldTask(seq {
+        yield! task.Coroutine
+        let next = binder task.Result
+        yield! next.Coroutine
+        result <- Some next.Result
+    }, fun () -> Option.get result)
+
 /// Consume a YieldTask into an IEnumerator, allowing it to be started as a Unity coroutine
 let run (task: YieldTask<unit>) =
     (seq {
-        yield task.Coroutine
+        yield! task.Coroutine
         task.Result
     }).GetEnumerator()
 

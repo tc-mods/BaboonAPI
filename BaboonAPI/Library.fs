@@ -24,20 +24,32 @@ type BaboonPlugin() =
         harmony.PatchAll(typeof<SafeguardPatch>)
         harmony.PatchAll(typeof<BrandingPatch>)
 
-    member this.TryLoadTracksAsync = Unity.task this {
-        try
-            yield TrackAccessor.loadAsync() |> this.StartCoroutine
-            ScoreStorage.baseGameStorage |> Option.iter (_.firstTimeBackup())
-            return Ok ()
-        with
-        | TrackAccessor.DuplicateTrackrefException trackref ->
-            let msg = String.concat "\n" [
-                $"Duplicate tracks found with track ID '{trackref}'"
-                "Please check your songs folder for duplicates!"
-            ]
-            return Error { PluginInfo = this.Info
-                           Message = msg }
-    }
+    member this.TryLoadTracksAsync () =
+        let logger = this.Logger
+        Unity.task {
+            match! TrackAccessor.loadAsync() with
+            | Ok () ->
+                ScoreStorage.baseGameStorage |> Option.iter (_.firstTimeBackup())
+                return Ok ()
+            | Error (TrackAccessor.DuplicateTrackrefException trackref) ->
+                let msg = String.concat "\n" [
+                    $"Duplicate tracks found with track ID '{trackref}'"
+                    "Please check your songs folder for duplicates!"
+                ]
+                return Error { PluginInfo = this.Info
+                               Message = msg }
+            | Error (TrackAccessor.DuplicateCollectionException uid) ->
+                let msg = String.concat "\n" [
+                    $"Duplicate collections found with unique ID '{uid}'"
+                    "Please check your collections folder for duplicates!"
+                ]
+                return Error { PluginInfo = this.Info
+                               Message = msg }
+            | Error err ->
+                logger.LogError err
+                return Error { PluginInfo = this.Info
+                               Message = GameInitializationEvent.formatError err }
+        }
 
     interface GameInitializationEvent.Listener with
         member this.Initialize() =

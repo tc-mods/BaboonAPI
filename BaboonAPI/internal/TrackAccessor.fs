@@ -2,10 +2,12 @@
 
 open System.Collections.Generic
 open BaboonAPI.Hooks.Tracks
+open BaboonAPI.Utility
 open BaboonAPI.Utility.Coroutines
 open UnityEngine
 
 exception DuplicateTrackrefException of string
+exception DuplicateCollectionException of string
 
 let makeSongGraph (track: TromboneTrack) =
     let generate _ =
@@ -71,24 +73,20 @@ let private checkForDuplicates (tracks: seq<string * RegisteredTrack>): seq<stri
             raise (DuplicateTrackrefException trackref)
 }
 
+let private checkForDuplicateCollections (collections: TromboneCollection seq): TromboneCollection seq = seq {
+    let seen = HashSet()
+    for entry in collections do
+        if seen.Add entry.unique_id then
+            yield entry
+        else
+            raise (DuplicateCollectionException entry.unique_id)
+}
+
 type TrackLoader() =
     let mutable tracks = Map.empty
     let mutable tracksByIndex = Array.empty
-
-    let makeTrackLoader () =
-        TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
-            |> Seq.indexed
-            |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
-            |> checkForDuplicates
-
-    let onTracksLoaded (loaded: seq<string * RegisteredTrack>) =
-        // Our track sequence is already sorted - trackIndex is set above ^
-        let sortedTracks = loaded |> Seq.toArray
-        tracks <- Map.ofArray sortedTracks
-        tracksByIndex <- sortedTracks |> Array.map snd
-
-        let allTracks = tracksByIndex |> Seq.map (fun rt -> rt.track) |> Seq.toList
-        TracksLoadedEvent.EVENT.invoker.OnTracksLoaded allTracks
+    let mutable collections = List.empty
+    let mutable collectionsById = Map.empty
 
     let collectionSorter (x: TromboneCollection) (y: TromboneCollection) =
         if x.unique_id = "default" || y.unique_id = "all" then
@@ -98,11 +96,37 @@ type TrackLoader() =
         else
             x.name.CompareTo y.name
 
+    let makeTrackLoader () =
+        let tracks =
+            TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
+            |> Seq.indexed
+            |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
+            |> checkForDuplicates
+            |> Seq.toArray
+
+        let collections =
+            TrackCollectionRegistrationEvent.EVENT.invoker.OnRegisterCollections()
+            |> Seq.sortWith collectionSorter
+            |> checkForDuplicateCollections
+            |> Seq.toList
+
+        (tracks, collections)
+
+    let onTracksLoaded (loadedTracks: array<string * RegisteredTrack>, loadedCollections: TromboneCollection list) =
+        // Our track sequence is already sorted - trackIndex is set above ^
+        tracks <- Map.ofArray loadedTracks
+        tracksByIndex <- loadedTracks |> Array.map snd
+        collections <- loadedCollections
+        collectionsById <- loadedCollections |> Seq.map (fun coll -> coll.unique_id, coll) |> Map.ofSeq
+
+        let allTracks = tracksByIndex |> Seq.map (_.track) |> Seq.toList
+        TracksLoadedEvent.EVENT.invoker.OnTracksLoaded allTracks
+
     member _.LoadTracks() =
         makeTrackLoader() |> onTracksLoaded
 
     member _.LoadTracksAsync () =
-        coroutine {
+        Unity.task {
             let task = Async.StartAsTask (async {
                 return makeTrackLoader()
             })
@@ -111,17 +135,17 @@ type TrackLoader() =
 
             if task.IsCompletedSuccessfully then
                 onTracksLoaded task.Result
-            else if task.IsFaulted then
-                raise task.Exception
+                return Ok ()
+            elif task.IsFaulted then
+                return Error (task.Exception :> exn)
+            else
+                return Error (exn "Unknown error occured during track loading")
         }
 
+    /// Resolve all track collections asynchronously and update base game about it
     member _.ResolveCollections () =
         coroutine {
             GlobalVariables.all_track_collections.Clear()
-            // TODO cache the collections builders
-            let collections =
-                TrackCollectionRegistrationEvent.EVENT.invoker.OnRegisterCollections()
-                |> Seq.sortWith collectionSorter
 
             for index, collection in Seq.indexed collections do
                 let! resolved = collection.Resolve(index)
@@ -129,6 +153,22 @@ type TrackLoader() =
 
             ()
         }
+
+    /// Update all track collections without doing a full async resolve
+    member this.UpdateCollections () =
+        let resolveTrack (track: TromboneTrack) =
+            let rt = this.lookup track.trackref
+            makeTrackData rt.track rt.trackIndex
+
+        for gameCollection in GlobalVariables.all_track_collections do
+            collectionsById
+            |> Map.tryFind gameCollection._unique_id
+            |> Option.iter (fun coll ->
+                gameCollection.all_tracks.Clear()
+                gameCollection.all_tracks.AddRange (Seq.map resolveTrack coll.tracks)
+                gameCollection._trackcount <- gameCollection.all_tracks.Count
+                gameCollection._runtime <- gameCollection.all_tracks |> Seq.sumBy (_.length)
+            )
 
     member _.Tracks = tracks
     member _.TracksByIndex = tracksByIndex
@@ -163,3 +203,6 @@ let loadAsync () =
 
 let loadCollectionsAsync () =
     trackLoader.ResolveCollections()
+
+let updateCollections () =
+    trackLoader.UpdateCollections()

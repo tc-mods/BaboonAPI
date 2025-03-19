@@ -3,6 +3,7 @@
 open System.Reflection.Emit
 open BaboonAPI.Hooks.Initializer
 open BaboonAPI.Utility.Coroutines
+open BepInEx.Bootstrap
 open HarmonyLib
 open UnityEngine
 open UnityEngine.UI
@@ -118,9 +119,20 @@ type BrandingPatch() =
     static let failtxt_f = AccessTools.Field(typeof<BrandingController>, "failed_to_load_error")
 
     static member RunInitialize (instance: BrandingController) =
-        ModInitializer.Initialize instance
-        |> instance.StartCoroutine
-        |> ignore
+        try
+            ModInitializer.Initialize instance
+            |> instance.StartCoroutine
+            |> ignore
+        with
+        | err ->
+            try
+                let loadError = { Message = err.Message
+                                  PluginInfo = Chainloader.PluginInfos["ch.offbeatwit.baboonapi.plugin"] }
+                ModInitializer.showResult instance (Error loadError)
+                |> instance.StartCoroutine
+                |> ignore
+            with
+            | _ -> instance.failed_to_load_error.SetActive true
 
     // Remove TrackCollections.buildTrackCollections() call, we need to patch it first
     [<HarmonyPatch("Start")>]
