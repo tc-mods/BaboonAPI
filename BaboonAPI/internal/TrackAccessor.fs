@@ -82,6 +82,12 @@ let private checkForDuplicateCollections (collections: TromboneCollection seq): 
             raise (DuplicateCollectionException entry.unique_id)
 }
 
+let private hookProgress (onProgress: int -> unit) (coll: 'a seq) = seq {
+    for i, entry in Seq.indexed coll do
+        yield entry
+        onProgress i
+}
+
 type TrackLoader() =
     let mutable tracks = Map.empty
     let mutable tracksByIndex = Array.empty
@@ -96,18 +102,20 @@ type TrackLoader() =
         else
             x.name.CompareTo y.name
 
-    let makeTrackLoader () =
+    let makeTrackLoader (onProgress: Progress -> unit) =
         let tracks =
             TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
             |> Seq.indexed
             |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
             |> checkForDuplicates
+            |> hookProgress (fun i -> onProgress (LoadingTracks { loaded = i }))
             |> Seq.toArray
 
         let collections =
             TrackCollectionRegistrationEvent.EVENT.invoker.OnRegisterCollections()
             |> Seq.sortWith collectionSorter
             |> checkForDuplicateCollections
+            |> hookProgress (fun i -> onProgress (LoadingCollections { loaded = i }))
             |> Seq.toList
 
         (tracks, collections)
@@ -122,19 +130,23 @@ type TrackLoader() =
         let allTracks = tracksByIndex |> Seq.map (_.track) |> Seq.toList
         TracksLoadedEvent.EVENT.invoker.OnTracksLoaded allTracks
 
-    member _.LoadTracks() =
-        makeTrackLoader() |> onTracksLoaded
+        { totalTracks = Array.length tracksByIndex; totalCollections = List.length collections }
 
-    member _.LoadTracksAsync () =
+    member _.LoadTracks onProgress =
+        let info = makeTrackLoader onProgress |> onTracksLoaded
+        onProgress (Done info)
+
+    member _.LoadTracksAsync onProgress =
         Unity.task {
             let task = Async.StartAsTask (async {
-                return makeTrackLoader()
+                return makeTrackLoader(onProgress)
             })
 
             yield WaitForTask(task)
 
             if task.IsCompletedSuccessfully then
-                onTracksLoaded task.Result
+                let info = onTracksLoaded task.Result
+                onProgress (Done info)
                 return Ok ()
             elif task.IsFaulted then
                 return Error (task.Exception :> exn)
@@ -144,7 +156,7 @@ type TrackLoader() =
 
     /// Resolve all track collections asynchronously and update base game about it
     member _.ResolveCollections () =
-        coroutine {
+        Unity.task {
             GlobalVariables.all_track_collections.Clear()
 
             for index, collection in Seq.indexed collections do
@@ -196,10 +208,13 @@ let allTracks () = trackLoader.TracksByIndex |> Seq.ofArray
 let toTrackData (track: TromboneTrack) = makeTrackData track (fetchTrackIndex track.trackref)
 
 let load () =
-    trackLoader.LoadTracks()
+    trackLoader.LoadTracks ignore
 
 let loadAsync () =
-    trackLoader.LoadTracksAsync()
+    trackLoader.LoadTracksAsync ignore
+
+let loadAsyncWithProgress onProgress =
+    trackLoader.LoadTracksAsync onProgress
 
 let loadCollectionsAsync () =
     trackLoader.ResolveCollections()

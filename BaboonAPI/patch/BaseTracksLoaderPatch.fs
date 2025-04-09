@@ -18,13 +18,14 @@ type private BaseTracksLoaderAccessor =
         let loader = GlobalVariables.track_collection_loader
 
         TrackAccessor.loadCollectionsAsync()
+        |> run
         |> loader.StartCoroutine
         |> ignore
 
     static member onClickReload (controller: HomeController) =
         controller.StartCoroutine(coroutine {
-            let! _ = TrackAccessor.loadAsync() // TODO
-            yield controller.StartCoroutine(TrackAccessor.loadCollectionsAsync())
+            let! _ = TrackAccessor.loadAsync() // TODO error handling
+            do! TrackAccessor.loadCollectionsAsync()
 
             controller.Invoke ("setCustomsPanelText", 0f)
 

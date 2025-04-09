@@ -26,25 +26,28 @@ let public allTracks (): TromboneTrack list =
     |> Seq.map (fun rt -> rt.track)
     |> Seq.toList
 
-/// Reload the list of tracks
-[<Obsolete("Use reloadAsync instead")>]
+/// <summary>Reload the list of tracks synchronously</summary>
+/// <remarks>NOTE: This function does not reload collections!</remarks>
+[<Obsolete("Use the methods in TrackReloader instead")>]
 let public reload () =
     TrackAccessor.load()
 
 /// <summary>Reload the list of tracks asynchronously.</summary>
 /// <remarks>Note this method does not reload collections.</remarks>
 /// <returns>A Unity coroutine that must be started using StartCoroutine.</returns>
+[<Obsolete("Use the methods in TrackReloader instead")>]
 let public reloadAsync () =
     TrackAccessor.loadAsync()
     |> Coroutines.each ignore
 
 /// <summary>Reload the list of tracks and collections asynchronously.</summary>
 /// <returns>A Unity coroutine that must be started using StartCoroutine.</returns>
-let public reloadAllAsync (behaviour: MonoBehaviour) =
+[<Obsolete("Use the methods in TrackReloader instead")>]
+let public reloadAllAsync (_: MonoBehaviour) =
     Coroutines.coroutine {
         match! TrackAccessor.loadAsync() with
         | Ok () ->
-            yield behaviour.StartCoroutine(TrackAccessor.loadCollectionsAsync())
+            do! TrackAccessor.loadCollectionsAsync()
         | Error err ->
             Debug.LogError err  // TODO
             ()

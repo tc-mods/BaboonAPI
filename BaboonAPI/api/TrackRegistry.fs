@@ -152,6 +152,19 @@ type TromboneCollection =
     /// Resolve this collection into a concrete collection
     abstract Resolve: index: int -> YieldTask<TrackCollection>
 
+type ProgressUpdate =
+    { loaded: int }
+
+type TracksLoadedInfo =
+    { totalTracks: int
+      totalCollections: int }
+
+/// Current track loading progress
+type Progress =
+    | LoadingTracks of ProgressUpdate
+    | LoadingCollections of ProgressUpdate
+    | Done of TracksLoadedInfo
+
 /// <summary>
 /// Event-based API for registering new tracks.
 /// </summary>

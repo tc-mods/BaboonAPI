@@ -70,6 +70,7 @@
         <Compile Include="api-post\TrackLookup.fs" />
         <Compile Include="api-post\Initializer.fs" />
         <Compile Include="api-post\Entrypoints.fs" />
+        <Compile Include="api-post\TrackReloader.fs" />
         <Compile Include="Library.fs" />
     </ItemGroup>
 
