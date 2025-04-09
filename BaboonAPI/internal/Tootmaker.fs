@@ -132,16 +132,20 @@ type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, s
 
     interface TrackRegistrationEvent.Listener with
         member this.OnRegisterTracks() = seq {
-            let folders = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
-            for folderPath in folders do
-                let songPath = Path.Combine(folderPath, "song.tmb")
-                if File.Exists songPath then
-                    use stream = File.OpenText songPath
-                    use reader = new JsonTextReader(stream)
-                    let data = serializer.Deserialize<SongDataCustom> reader
-                    yield TootmakerTrack (data, folderPath)
+            if Directory.Exists path then
+                let folders = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
+                for folderPath in folders do
+                    let songPath = Path.Combine(folderPath, "song.tmb")
+                    if File.Exists songPath then
+                        use stream = File.OpenText songPath
+                        use reader = new JsonTextReader(stream)
+                        let data = serializer.Deserialize<SongDataCustom> reader
+                        yield TootmakerTrack (data, folderPath)
         }
 
     interface TrackCollectionRegistrationEvent.Listener with
         member this.OnRegisterCollections() =
-            Seq.singleton (TootmakerCollection (path, localizer, sprites))
+            if Directory.Exists path then
+                Seq.singleton (TootmakerCollection (path, localizer, sprites))
+            else
+                Seq.empty
