@@ -163,7 +163,9 @@ type TracksLoadedInfo =
 type Progress =
     | LoadingTracks of ProgressUpdate
     | LoadingCollections of ProgressUpdate
-    | Done of TracksLoadedInfo
+    | FirstStageDone of TracksLoadedInfo
+    | ResolvingCollections of ProgressUpdate
+    | SecondStageDone of ProgressUpdate
 
 /// <summary>
 /// Event-based API for registering new tracks.

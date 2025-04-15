@@ -134,7 +134,7 @@ type TrackLoader() =
 
     member _.LoadTracks onProgress =
         let info = makeTrackLoader onProgress |> onTracksLoaded
-        onProgress (Done info)
+        onProgress (FirstStageDone info)
 
     member _.LoadTracksAsync onProgress =
         Unity.task {
@@ -146,7 +146,7 @@ type TrackLoader() =
 
             if task.IsCompletedSuccessfully then
                 let info = onTracksLoaded task.Result
-                onProgress (Done info)
+                onProgress (FirstStageDone info)
                 return Ok ()
             elif task.IsFaulted then
                 return Error (task.Exception :> exn)
@@ -155,15 +155,16 @@ type TrackLoader() =
         }
 
     /// Resolve all track collections asynchronously and update base game about it
-    member _.ResolveCollections () =
+    member _.ResolveCollections onProgress =
         Unity.task {
             GlobalVariables.all_track_collections.Clear()
 
             for index, collection in Seq.indexed collections do
                 let! resolved = collection.Resolve(index)
+                onProgress (ResolvingCollections { loaded = index + 1 })
                 GlobalVariables.all_track_collections.Add resolved
 
-            ()
+            onProgress (SecondStageDone { loaded = GlobalVariables.all_track_collections.Count })
         }
 
     /// Update all track collections without doing a full async resolve
@@ -217,7 +218,10 @@ let loadAsyncWithProgress onProgress =
     trackLoader.LoadTracksAsync onProgress
 
 let loadCollectionsAsync () =
-    trackLoader.ResolveCollections()
+    trackLoader.ResolveCollections ignore
+
+let loadCollectionsAsyncWithProgress onProgress =
+    trackLoader.ResolveCollections onProgress
 
 let updateCollections () =
     trackLoader.UpdateCollections()
