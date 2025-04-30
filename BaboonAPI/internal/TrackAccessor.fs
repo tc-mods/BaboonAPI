@@ -127,9 +127,6 @@ type TrackLoader() =
         collections <- loadedCollections
         collectionsById <- loadedCollections |> Seq.map (fun coll -> coll.unique_id, coll) |> Map.ofSeq
 
-        let allTracks = tracksByIndex |> Seq.map (_.track) |> Seq.toList
-        TracksLoadedEvent.EVENT.invoker.OnTracksLoaded allTracks
-
         { totalTracks = Array.length tracksByIndex; totalCollections = List.length collections }
 
     member _.LoadTracks onProgress =
@@ -155,7 +152,7 @@ type TrackLoader() =
         }
 
     /// Resolve all track collections asynchronously and update base game about it
-    member _.ResolveCollections onProgress =
+    member this.ResolveCollections onProgress =
         Unity.task {
             GlobalVariables.all_track_collections.Clear()
 
@@ -165,6 +162,8 @@ type TrackLoader() =
                 GlobalVariables.all_track_collections.Add resolved
 
             onProgress (SecondStageDone { loaded = GlobalVariables.all_track_collections.Count })
+
+            TracksLoadedEvent.EVENT.invoker.OnTracksLoaded List.empty
         }
 
     /// Update all track collections without doing a full async resolve
@@ -182,6 +181,8 @@ type TrackLoader() =
                 gameCollection._trackcount <- gameCollection.all_tracks.Count
                 gameCollection._runtime <- gameCollection.all_tracks |> Seq.sumBy (_.length)
             )
+
+        TracksLoadedEvent.EVENT.invoker.OnTracksLoaded List.empty
 
     member _.Tracks = tracks
     member _.TracksByIndex = tracksByIndex
