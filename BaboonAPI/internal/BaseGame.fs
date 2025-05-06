@@ -94,8 +94,13 @@ type internal BaseGameCollectionSprites(sprites: Sprite array) =
     member _.favorites = sprites[3]
     member _.allTracks = sprites[4]
 
-type internal BaseGameTrackCollection(localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
-    inherit BaseTromboneCollection("default", localizer.getLocalizedText("collections_name_default"), localizer.getLocalizedText("collections_desc_default"))
+/// Localized strings for base game collections, pre-calculated on Unity thread
+type internal CollectionStrings =
+    { name: string
+      description: string }
+
+type internal BaseGameTrackCollection(meta: CollectionStrings, sprites: BaseGameCollectionSprites) =
+    inherit BaseTromboneCollection("default", meta.name, meta.description)
 
     override this.LoadSprite() =
         sync (fun () -> Ok sprites.baseGame)
@@ -105,8 +110,8 @@ type internal BaseGameTrackCollection(localizer: StringLocalizer, sprites: BaseG
         |> Seq.map _.track
         |> Seq.filter (fun t -> t :? BaseGameTrack)
 
-type internal AllTracksCollection(localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
-    inherit BaseTromboneCollection("all", localizer.getLocalizedText("collections_name_all"), localizer.getLocalizedText("collections_desc_all"))
+type internal AllTracksCollection(meta: CollectionStrings, sprites: BaseGameCollectionSprites) =
+    inherit BaseTromboneCollection("all", meta.name, meta.description)
 
     override this.LoadSprite() =
         sync (fun () -> Ok sprites.allTracks)
@@ -115,8 +120,8 @@ type internal AllTracksCollection(localizer: StringLocalizer, sprites: BaseGameC
         TrackAccessor.allTracks()
         |> Seq.map _.track
 
-type internal FavoriteTracksCollection(localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
-    inherit BaseTromboneCollection("favorites", localizer.getLocalizedText("collections_name_favorites"), localizer.getLocalizedText("collections_desc_favorites"))
+type internal FavoriteTracksCollection(meta: CollectionStrings, sprites: BaseGameCollectionSprites) =
+    inherit BaseTromboneCollection("favorites", meta.name, meta.description)
 
     override this.LoadSprite() =
         sync (fun () -> Ok sprites.favorites)
@@ -127,6 +132,13 @@ type internal FavoriteTracksCollection(localizer: StringLocalizer, sprites: Base
         |> Seq.filter (TrackAccessor.toTrackData >> _.is_favorite)
 
 type internal BaseGameTrackRegistry(path: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
+    let defaultMeta = { name = localizer.getLocalizedText("collections_name_default")
+                        description = localizer.getLocalizedText("collections_desc_default") }
+    let allMeta = { name = localizer.getLocalizedText("collections_name_all")
+                    description = localizer.getLocalizedText("collections_desc_all") }
+    let favoriteMeta = { name = localizer.getLocalizedText("collections_name_favorites")
+                         description = localizer.getLocalizedText("collections_desc_favorites") }
+
     interface TrackRegistrationEvent.Listener with
         override this.OnRegisterTracks () = seq {
             let dirs = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
@@ -152,7 +164,7 @@ type internal BaseGameTrackRegistry(path: string, localizer: StringLocalizer, sp
 
     interface TrackCollectionRegistrationEvent.Listener with
         member this.OnRegisterCollections() = seq {
-            yield BaseGameTrackCollection (localizer, sprites)
-            yield FavoriteTracksCollection (localizer, sprites)
-            yield AllTracksCollection (localizer, sprites)
+            yield BaseGameTrackCollection (defaultMeta, sprites)
+            yield FavoriteTracksCollection (favoriteMeta, sprites)
+            yield AllTracksCollection (allMeta, sprites)
         }

@@ -99,8 +99,8 @@ type public TootmakerTrack internal (data: SongDataCustom, folderPath: string) =
     interface FilesystemTrack with
         member _.folderPath = folderPath
 
-type internal TootmakerCollection(folderPath: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
-    inherit BaseTromboneCollection("tootmaker", localizer.getLocalizedText("collections_name_tootmaker"), localizer.getLocalizedText("collections_desc_tootmaker"))
+type internal TootmakerCollection(folderPath: string, meta: CollectionStrings, sprites: BaseGameCollectionSprites) =
+    inherit BaseTromboneCollection("tootmaker", meta.name, meta.description)
 
     override _.folder = Path.GetFileName(folderPath.TrimEnd('/', '\\'))
     override _.LoadSprite() = sync(fun () -> Ok sprites.tootmaker)
@@ -129,7 +129,8 @@ type internal CustomCollection(folderPath: string, trackRefs: string list, meta:
 
 type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
     let serializer = JsonSerializer()
-    let tootmakerCollection = TootmakerCollection (path, localizer, sprites)
+    let meta = { name = localizer.getLocalizedText("collections_name_tootmaker")
+                 description = localizer.getLocalizedText("collections_desc_tootmaker") }
 
     interface TrackRegistrationEvent.Listener with
         member this.OnRegisterTracks() = seq {
@@ -147,6 +148,6 @@ type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, s
     interface TrackCollectionRegistrationEvent.Listener with
         member this.OnRegisterCollections() =
             if Directory.Exists path then
-                Seq.singleton tootmakerCollection
+                Seq.singleton (TootmakerCollection (path, meta, sprites))
             else
                 Seq.empty
