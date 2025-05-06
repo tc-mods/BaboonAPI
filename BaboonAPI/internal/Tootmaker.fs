@@ -129,6 +129,7 @@ type internal CustomCollection(folderPath: string, trackRefs: string list, meta:
 
 type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
     let serializer = JsonSerializer()
+    let tootmakerCollection = TootmakerCollection (path, localizer, sprites)
 
     interface TrackRegistrationEvent.Listener with
         member this.OnRegisterTracks() = seq {
@@ -146,6 +147,6 @@ type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, s
     interface TrackCollectionRegistrationEvent.Listener with
         member this.OnRegisterCollections() =
             if Directory.Exists path then
-                Seq.singleton (TootmakerCollection (path, localizer, sprites))
+                Seq.singleton tootmakerCollection
             else
                 Seq.empty
