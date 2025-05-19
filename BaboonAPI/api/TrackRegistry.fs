@@ -190,11 +190,12 @@ module TrackRegistrationEvent =
                 member _.OnRegisterTracks () =
                     listeners |> Seq.collect (fun l -> l.OnRegisterTracks()) })
 
-/// Event fired whenever tracks have finished loading.
+/// Event fired whenever track collections are reloaded.
 module TracksLoadedEvent =
     /// Event listener type
     type public Listener =
-        /// Called when tracks have finished loading.
+        /// <summary>Called when track collections have finished loading.</summary>
+        /// <remarks>The passed list is now empty for efficiency reasons; use TrackLookup instead</remarks>
         abstract OnTracksLoaded: TromboneTrack list -> unit
 
     /// Event bus
