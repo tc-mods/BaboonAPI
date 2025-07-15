@@ -167,6 +167,25 @@ type Progress =
     | ResolvingCollections of ProgressUpdate
     | SecondStageDone of ProgressUpdate
 
+/// Tiers of custom track loader
+type LoadingPriority =
+    /// A base game custom track loader
+    | Vanilla = 0
+
+    /// A modded custom track loader that provides extra functionality.
+    /// Will be ranked over vanilla loaders.
+    | Modded = 1
+
+/// Track loader responsible for loading "base game customs".
+/// For example, tootmaker tracks or additional custom collections
+type CustomTrackLoader =
+    /// The priority of this loader. Modded loaders will be preferred over vanilla ones.
+    abstract Priority: LoadingPriority
+
+    /// <summary>Called to load a custom track from <paramref name="folderPath"/></summary>
+    /// <param name="folderPath">Full path to a folder containing a 'song.tmb' file</param>
+    abstract LoadTrack: folderPath: string -> TromboneTrack
+
 /// <summary>
 /// Event-based API for registering new tracks.
 /// </summary>
@@ -216,3 +235,14 @@ module TrackCollectionRegistrationEvent =
             { new Listener with
                 member _.OnRegisterCollections () =
                     listeners |> Seq.collect (_.OnRegisterCollections()) })
+
+/// Hook for intercepting base game track loading
+module CustomTrackLoaderEvent =
+    type public Listener =
+        abstract GetLoader: unit -> CustomTrackLoader
+
+    let EVENT =
+        EventFactory.create (fun listeners ->
+            { new Listener with
+                member _.GetLoader () =
+                    listeners |> Seq.map (_.GetLoader()) |> Seq.maxBy (fun l -> (int l.Priority)) })
