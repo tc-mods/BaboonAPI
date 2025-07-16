@@ -42,12 +42,11 @@ type internal WorkshopTrackLoader(meta: CollectionStrings, sprites: BaseGameColl
 
                 if SteamUGC.GetItemInstallInfo (pubId, &size, &folder, 1024u, &timestamp) then
                     match loader.LoadTrack folder with
-                    | Ok track ->
+                    | Some track ->
                         workshopTrackRefs.Add track.trackref
                         yield track
-                    | Error err ->
+                    | None ->
                         logger.LogWarning $"Failed to load workshop track in '{folder}' ({pubId.m_PublishedFileId})"
-                        logger.LogWarning err
         }
 
     interface TrackCollectionRegistrationEvent.Listener with

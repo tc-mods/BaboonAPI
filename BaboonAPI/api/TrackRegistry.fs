@@ -184,7 +184,7 @@ type CustomTrackLoader =
 
     /// <summary>Called to load a custom track from <paramref name="folderPath"/></summary>
     /// <param name="folderPath">Full path to a folder containing a 'song.tmb' file</param>
-    abstract LoadTrack: folderPath: string -> Result<TromboneTrack, exn>
+    abstract LoadTrack: folderPath: string -> TromboneTrack option
 
 /// <summary>
 /// Event-based API for registering new tracks.

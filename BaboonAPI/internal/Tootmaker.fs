@@ -8,6 +8,7 @@ open BaboonAPI.Internal
 open BaboonAPI.Internal.BaseGame
 open BaboonAPI.Utility
 open BaboonAPI.Utility.Coroutines
+open BepInEx.Logging
 open HarmonyLib
 open Newtonsoft.Json
 open UnityEngine
@@ -123,6 +124,8 @@ type internal TootmakerCollection(folderPath: string, meta: CollectionStrings, s
             | _ -> false)
 
 type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
+    static let logger = Logger.CreateLogSource "BaboonAPI.CustomTrackLoader"
+
     let serializer = JsonSerializer()
     let meta = { name = localizer.getLocalizedText("collections_name_tootmaker")
                  description = localizer.getLocalizedText("collections_desc_tootmaker") }
@@ -157,7 +160,9 @@ type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, s
                 use stream = File.OpenText songPath
                 use reader = new JsonTextReader(stream)
                 let data = serializer.Deserialize<SongDataCustom> reader
-                Ok (TootmakerTrack (data, folderPath, Custom))
+                Some (TootmakerTrack (data, folderPath, Custom))
             with
             | err ->
-                Error err
+                logger.LogWarning $"Failed to load custom track in '{folderPath}'"
+                logger.LogWarning err
+                None
