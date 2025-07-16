@@ -5,6 +5,7 @@ open BaboonAPI.Hooks.Tracks.Collections
 open BaboonAPI.Internal
 open BaboonAPI.Internal.BaseGame
 open BaboonAPI.Utility
+open BepInEx.Logging
 open Steamworks
 
 type internal WorkshopCollection(meta: CollectionStrings, sprites: BaseGameCollectionSprites, trackRefs: string seq) =
@@ -14,6 +15,8 @@ type internal WorkshopCollection(meta: CollectionStrings, sprites: BaseGameColle
     override _.BuildTrackList() = trackRefs |> Seq.map TrackAccessor.fetchTrack
 
 type internal WorkshopTrackLoader(meta: CollectionStrings, sprites: BaseGameCollectionSprites) =
+    static let logger = Logger.CreateLogSource "BaboonAPI.WorkshopTrackLoader"
+
     let workshopTrackRefs = ResizeArray()
     let fetchSubscribedItems () =
         let count = SteamUGC.GetNumSubscribedItems()
@@ -29,7 +32,7 @@ type internal WorkshopTrackLoader(meta: CollectionStrings, sprites: BaseGameColl
         member _.OnRegisterTracks() = seq {
             workshopTrackRefs.Clear()
 
-            let loader = CustomTrackLoaderEvent.EVENT.invoker.GetLoader()
+            let loader = CustomTrackLoaderEvent.EVENT.invoker
             let items = fetchSubscribedItems()
 
             for pubId in items do
@@ -38,9 +41,13 @@ type internal WorkshopTrackLoader(meta: CollectionStrings, sprites: BaseGameColl
                 let mutable timestamp = 0u
 
                 if SteamUGC.GetItemInstallInfo (pubId, &size, &folder, 1024u, &timestamp) then
-                    let track = loader.LoadTrack folder
-                    workshopTrackRefs.Add track.trackref
-                    yield track
+                    match loader.LoadTrack folder with
+                    | Ok track ->
+                        workshopTrackRefs.Add track.trackref
+                        yield track
+                    | Error err ->
+                        logger.LogWarning $"Failed to load workshop track in '{folder}' ({pubId.m_PublishedFileId})"
+                        logger.LogWarning err
         }
 
     interface TrackCollectionRegistrationEvent.Listener with

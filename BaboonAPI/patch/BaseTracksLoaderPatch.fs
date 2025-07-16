@@ -54,6 +54,7 @@ type LoaderPatch() =
         let registry = TootmakerTrackRegistry (tootmakerPath, ___string_localizer, sprites)
         TrackRegistrationEvent.EVENT.Register registry
         TrackCollectionRegistrationEvent.EVENT.Register registry
+        CustomTrackLoaderEvent.EVENT.Register registry
 
         let customsPath = GlobalVariables.localsettings.collections_path_custom
         let registry = CustomCollectionsRegistry (customsPath, ___string_localizer, sprites)

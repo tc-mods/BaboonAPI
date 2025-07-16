@@ -55,8 +55,19 @@ type public LoadedTootmakerTrack internal (trackref: string, folderPath: string)
         member this.OnPause ctx = ()
         member this.OnResume ctx = ()
 
+/// Where this base game custom track originated
+type TootmakerTrackSource =
+    | Tootmaker
+    | Custom
+
 /// A base-game custom track
-type public TootmakerTrack internal (data: SongDataCustom, folderPath: string) =
+type public TootmakerTrack internal (data: SongDataCustom, folderPath: string, source: TootmakerTrackSource) =
+    member _.source = source
+    member _.isTootmaker =
+        match source with
+        | Tootmaker -> true
+        | Custom -> false
+
     interface TromboneTrack with
         member _.trackname_short = data.shortName
         member _.trackname_long = data.name
@@ -105,9 +116,11 @@ type internal TootmakerCollection(folderPath: string, meta: CollectionStrings, s
     override _.folder = Path.GetFileName(folderPath.TrimEnd('/', '\\'))
     override _.LoadSprite() = sync(fun () -> Ok sprites.tootmaker)
     override this.BuildTrackList() =
-        TrackAccessor.allTracks()
+        TrackAccessor.allTracks ()
         |> Seq.map _.track
-        |> Seq.filter (fun t -> t :? TootmakerTrack)
+        |> Seq.filter (function
+            | :? TootmakerTrack as tt -> tt.isTootmaker
+            | _ -> false)
 
 type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
     let serializer = JsonSerializer()
@@ -124,7 +137,7 @@ type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, s
                         use stream = File.OpenText songPath
                         use reader = new JsonTextReader(stream)
                         let data = serializer.Deserialize<SongDataCustom> reader
-                        yield TootmakerTrack (data, folderPath)
+                        yield TootmakerTrack (data, folderPath, Tootmaker)
         }
 
     interface TrackCollectionRegistrationEvent.Listener with
@@ -133,3 +146,18 @@ type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, s
                 Seq.singleton (TootmakerCollection (path, meta, sprites))
             else
                 Seq.empty
+
+    // We act as the vanilla customs loader since vanilla treats Tootmaker and custom tracks the same.
+    interface CustomTrackLoader with
+        member this.Priority = LoadingPriority.Vanilla
+
+        member this.LoadTrack folderPath =
+            let songPath = Path.Combine(folderPath, "song.tmb")
+            try
+                use stream = File.OpenText songPath
+                use reader = new JsonTextReader(stream)
+                let data = serializer.Deserialize<SongDataCustom> reader
+                Ok (TootmakerTrack (data, folderPath, Custom))
+            with
+            | err ->
+                Error err

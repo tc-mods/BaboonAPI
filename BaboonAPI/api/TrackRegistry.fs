@@ -184,7 +184,7 @@ type CustomTrackLoader =
 
     /// <summary>Called to load a custom track from <paramref name="folderPath"/></summary>
     /// <param name="folderPath">Full path to a folder containing a 'song.tmb' file</param>
-    abstract LoadTrack: folderPath: string -> TromboneTrack
+    abstract LoadTrack: folderPath: string -> Result<TromboneTrack, exn>
 
 /// <summary>
 /// Event-based API for registering new tracks.
@@ -238,11 +238,4 @@ module TrackCollectionRegistrationEvent =
 
 /// Hook for intercepting base game track loading
 module CustomTrackLoaderEvent =
-    type public Listener =
-        abstract GetLoader: unit -> CustomTrackLoader
-
-    let EVENT =
-        EventFactory.create (fun listeners ->
-            { new Listener with
-                member _.GetLoader () =
-                    listeners |> Seq.map (_.GetLoader()) |> Seq.maxBy (fun l -> (int l.Priority)) })
+    let EVENT = EventFactory<CustomTrackLoader>.create (Seq.maxBy (fun l -> (int l.Priority)))

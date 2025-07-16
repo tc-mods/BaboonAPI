@@ -6,6 +6,7 @@ open BaboonAPI.Hooks.Tracks.Collections
 open BaboonAPI.Internal
 open BaboonAPI.Internal.BaseGame
 open BaboonAPI.Utility
+open BepInEx.Logging
 open Newtonsoft.Json
 open UnityEngine
 
@@ -32,6 +33,8 @@ type internal CustomCollection(folderPath: string, trackRefs: string seq, meta: 
 
 /// Responsible for loading custom collections
 type internal CustomCollectionsRegistry(basePath: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
+    static let logger = Logger.CreateLogSource "BaboonAPI.CustomCollections"
+
     let serializer = JsonSerializer()
     let defaultMeta = TrackCollections.ExternalCollectionMetadata(name = localizer.getLocalizedText("collections_name_custom"), description = "")
     let loadedTrackRefs = ResizeArray()
@@ -40,6 +43,12 @@ type internal CustomCollectionsRegistry(basePath: string, localizer: StringLocal
         Directory.EnumerateFiles(folderPath, "song.tmb", SearchOption.TopDirectoryOnly)
             |> Seq.map Path.GetDirectoryName
             |> Seq.map loader.LoadTrack
+            |> Seq.choose (function
+                | Ok t -> Some t
+                | Error err ->
+                    logger.LogWarning $"Failed to load a custom track in '{folderPath}'"
+                    logger.LogWarning err
+                    None)
 
     let tryLoadMetadata (folderPath: string) =
         let metaPath = Path.Combine(folderPath, "collection_metadata.json")
@@ -63,7 +72,7 @@ type internal CustomCollectionsRegistry(basePath: string, localizer: StringLocal
         member this.OnRegisterTracks() =
             loadedTrackRefs.Clear()
 
-            let loader = CustomTrackLoaderEvent.EVENT.invoker.GetLoader()
+            let loader = CustomTrackLoaderEvent.EVENT.invoker
 
             if Directory.Exists basePath then
                 Directory.EnumerateDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
