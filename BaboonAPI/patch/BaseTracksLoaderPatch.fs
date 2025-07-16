@@ -4,6 +4,7 @@ open System.Reflection.Emit
 open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
 open BaboonAPI.Internal.BaseGame
+open BaboonAPI.Internal.Customs
 open BaboonAPI.Internal.Tootmaker
 open BaboonAPI.Utility.Coroutines
 open HarmonyLib
@@ -51,6 +52,11 @@ type LoaderPatch() =
 
         let tootmakerPath = GlobalVariables.localsettings.collections_path_tootmaker
         let registry = TootmakerTrackRegistry (tootmakerPath, ___string_localizer, sprites)
+        TrackRegistrationEvent.EVENT.Register registry
+        TrackCollectionRegistrationEvent.EVENT.Register registry
+
+        let customsPath = GlobalVariables.localsettings.collections_path_custom
+        let registry = CustomCollectionsRegistry (customsPath, ___string_localizer, sprites)
         TrackRegistrationEvent.EVENT.Register registry
         TrackCollectionRegistrationEvent.EVENT.Register registry
 

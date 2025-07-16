@@ -109,24 +109,6 @@ type internal TootmakerCollection(folderPath: string, meta: CollectionStrings, s
         |> Seq.map _.track
         |> Seq.filter (fun t -> t :? TootmakerTrack)
 
-type internal CustomCollection(folderPath: string, trackRefs: string list, meta: TrackCollections.ExternalCollectionMetadata, sprites: BaseGameCollectionSprites) =
-    inherit BaseTromboneCollection(Hash128.Compute(folderPath).ToString(), meta.name, meta.description)
-
-    override _.folder = Path.GetFileName(folderPath.TrimEnd('/', '\\'))
-
-    override this.LoadSprite() =
-        let spritePaths = ["cover.png"; "cover.jpg"] |> List.map (fun name -> Path.Combine(folderPath, name))
-        let path = spritePaths |> List.tryFind File.Exists
-        match path with
-        | Some spritePath ->
-            Unity.loadTexture spritePath
-            |> (map << Result.map) (fun tex -> Sprite.Create (tex, Rect (0f, 0f, float32 tex.width, float32 tex.height), Vector2.zero))
-        | None ->
-            sync (fun () -> Ok sprites.custom)
-
-    override this.BuildTrackList() =
-        trackRefs |> Seq.map TrackAccessor.fetchTrack
-
 type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
     let serializer = JsonSerializer()
     let meta = { name = localizer.getLocalizedText("collections_name_tootmaker")
@@ -135,7 +117,7 @@ type internal TootmakerTrackRegistry(path: string, localizer: StringLocalizer, s
     interface TrackRegistrationEvent.Listener with
         member this.OnRegisterTracks() = seq {
             if Directory.Exists path then
-                let folders = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
+                let folders = Directory.EnumerateDirectories(path, "*", SearchOption.TopDirectoryOnly)
                 for folderPath in folders do
                     let songPath = Path.Combine(folderPath, "song.tmb")
                     if File.Exists songPath then

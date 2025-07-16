@@ -60,6 +60,8 @@
         <Compile Include="internal\Debug.fs" />
         <Compile Include="internal\BaseGame.fs" />
         <Compile Include="internal\Tootmaker.fs" />
+        <Compile Include="internal\Customs.fs" />
+        <Compile Include="internal\Workshop.fs" />
         <Compile Include="patch\TrackrefPatches.fs" />
         <Compile Include="patch\BaseTracksLoaderPatch.fs" />
         <Compile Include="patch\GameControllerPatch.fs" />

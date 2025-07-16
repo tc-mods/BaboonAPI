@@ -93,6 +93,7 @@ type internal BaseGameCollectionSprites(sprites: Sprite array) =
     member _.custom = sprites[2]
     member _.favorites = sprites[3]
     member _.allTracks = sprites[4]
+    member _.workshop = sprites[5]
 
 /// Localized strings for base game collections, pre-calculated on Unity thread
 type internal CollectionStrings =
