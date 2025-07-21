@@ -6,6 +6,7 @@ open BaboonAPI.Internal
 open BaboonAPI.Internal.BaseGame
 open BaboonAPI.Internal.Customs
 open BaboonAPI.Internal.Tootmaker
+open BaboonAPI.Internal.Workshop
 open BaboonAPI.Utility.Coroutines
 open HarmonyLib
 open UnityEngine
@@ -58,6 +59,13 @@ type LoaderPatch() =
 
         let customsPath = GlobalVariables.localsettings.collections_path_custom
         let registry = CustomCollectionsRegistry (customsPath, ___string_localizer, sprites)
+        TrackRegistrationEvent.EVENT.Register registry
+        TrackCollectionRegistrationEvent.EVENT.Register registry
+
+        let workshopStrings =
+            { name = ___string_localizer.getLocalizedText("collections_name_workshop")
+              description = ___string_localizer.getLocalizedText("collections_desc_workshop") }
+        let registry = WorkshopTrackLoader (workshopStrings, sprites)
         TrackRegistrationEvent.EVENT.Register registry
         TrackCollectionRegistrationEvent.EVENT.Register registry
 

@@ -11,6 +11,7 @@ open Steamworks
 type internal WorkshopCollection(meta: CollectionStrings, sprites: BaseGameCollectionSprites, trackRefs: string seq) =
     inherit BaseTromboneCollection("steamworkshop", meta.name, meta.description)
 
+    override this.folder = "Steam/steamapps/workshop"
     override _.LoadSprite() = Coroutines.sync(fun () -> Ok sprites.workshop)
     override _.BuildTrackList() = trackRefs |> Seq.map TrackAccessor.fetchTrack
 
