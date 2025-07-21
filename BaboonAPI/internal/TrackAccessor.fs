@@ -2,6 +2,7 @@
 
 open System.Collections.Generic
 open BaboonAPI.Hooks.Tracks
+open BaboonAPI.Internal.ScoreStorage
 open BaboonAPI.Utility
 open BaboonAPI.Utility.Coroutines
 open UnityEngine
@@ -55,6 +56,7 @@ let makeTrackData (track: TromboneTrack) (trackindex: int): SingleTrackData =
                     is_favorite = favorites.Contains(track.trackref),
                     user_scores = storage.Load(track.trackref).ToBaseGame(),
                     track_folder = trackFolder,
+                    json_format = not (storage :? BaseTrackScoreStorage), // don't even worry about it
                     trackindex = trackindex)
 
 type RegisteredTrack =
