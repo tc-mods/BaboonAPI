@@ -50,7 +50,10 @@ type private TrackrefAccessor() =
         (TrackAccessor.fetchRegisteredTrack trackref).asTrackData
 
     static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: ResizeArray<SingleTrackData>) =
-        instance.gameObject.AddComponent<LevelSelectReloadBehaviour>().Init(instance, alltrackslist)
+        // instance.gameObject.AddComponent<LevelSelectReloadBehaviour>().Init(instance, alltrackslist)
+        let index = GlobalVariables.all_track_collections.FindIndex(fun coll -> coll._unique_id = "all")
+        if index <> -1 then
+            GlobalVariables.chosen_collection_index <- index
 
 [<HarmonyPatch(typeof<SaverLoader>, "loadTrackData")>]
 type TrackLoaderPatch() =
@@ -62,6 +65,12 @@ type TrackLoaderPatch() =
 
 [<HarmonyPatch(typeof<LevelSelectController>)>]
 type LevelSelectPatch() =
+    [<HarmonyPrefix>]
+    [<HarmonyPatch("Start")>]
+    static member PatchStart (__instance: LevelSelectController, ___alltrackslist: ResizeArray<SingleTrackData>) =
+        TrackrefAccessor.doLevelSelectStart(__instance, ___alltrackslist)
+        true
+
     [<HarmonyPrefix>]
     [<HarmonyPatch("checkForSongsToHide")>]
     static member PatchSongsVisible (__instance: LevelSelectController, ___alltrackslist: ResizeArray<SingleTrackData>) =

@@ -193,6 +193,8 @@ type TrackLoader() =
 
     member _.tryLookup (trackref: string) = Map.tryFind trackref tracks
 
+    member _.tryLookupCollection (unique_id: string) = Map.tryFind unique_id collectionsById
+
 let private trackLoader = TrackLoader()
 
 let fetchTrackByIndex (id: int) : TromboneTrack = trackLoader.TracksByIndex[id].track
@@ -210,6 +212,8 @@ let trackCount () = trackLoader.Tracks.Count
 let allTracks () = trackLoader.TracksByIndex |> Seq.ofArray
 
 let toTrackData (track: TromboneTrack) = makeTrackData track (fetchTrackIndex track.trackref)
+
+let tryFetchCollection (ref: string) = trackLoader.tryLookupCollection ref
 
 let load () =
     trackLoader.LoadTracks ignore
