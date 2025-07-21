@@ -34,12 +34,15 @@ type internal CustomCollection(folderPath: string, trackRefs: string seq, meta: 
 type internal CustomCollectionsRegistry(basePath: string, localizer: StringLocalizer, sprites: BaseGameCollectionSprites) =
     let serializer = JsonSerializer()
     let defaultMeta = TrackCollections.ExternalCollectionMetadata(name = localizer.getLocalizedText("collections_name_custom"), description = "")
-    let loadedTrackRefs = ResizeArray()
+    let mutable loadedTrackRefs = Map.empty
 
     let loadCollectionTracks (loader: CustomTrackLoader) (folderPath: string) =
-        Directory.EnumerateFiles(folderPath, "song.tmb", SearchOption.TopDirectoryOnly)
+        let tracks =
+            Directory.EnumerateFiles(folderPath, "song.tmb", SearchOption.TopDirectoryOnly)
             |> Seq.map Path.GetDirectoryName
             |> Seq.choose loader.LoadTrack
+
+        (folderPath, tracks)
 
     let tryLoadMetadata (folderPath: string) =
         let metaPath = Path.Combine(folderPath, "collection_metadata.json")
@@ -53,22 +56,22 @@ type internal CustomCollectionsRegistry(basePath: string, localizer: StringLocal
         else
             None
 
-    let hookTrackRefs (tracks: TromboneTrack seq) = seq {
-        for t in tracks do
-            loadedTrackRefs.Add t.trackref
-            yield t
-    }
+    let hookTrackRefs (folderPath: string, tracks: TromboneTrack seq) =
+        let trackrefs = tracks |> Seq.map (_.trackref) |> Seq.toList
+        loadedTrackRefs <- Map.add folderPath trackrefs loadedTrackRefs
+
+        tracks
 
     interface TrackRegistrationEvent.Listener with
         member this.OnRegisterTracks() =
-            loadedTrackRefs.Clear()
+            loadedTrackRefs <- Map.empty
 
             let loader = CustomTrackLoaderEvent.EVENT.invoker
 
             if Directory.Exists basePath then
                 Directory.EnumerateDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
-                |> Seq.collect (loadCollectionTracks loader)
-                |> hookTrackRefs
+                |> Seq.map (loadCollectionTracks loader)
+                |> Seq.collect hookTrackRefs
             else
                 Seq.empty
 
@@ -81,5 +84,8 @@ type internal CustomCollectionsRegistry(basePath: string, localizer: StringLocal
                     for folder in collections do
                         let meta = tryLoadMetadata folder |> Option.defaultValue defaultMeta
 
-                        yield CustomCollection(folder, loadedTrackRefs, meta, sprites)
+                        match loadedTrackRefs |> Map.tryFind folder with
+                        | Some trackRefs when not (List.isEmpty trackRefs) ->
+                            yield CustomCollection(folder, trackRefs, meta, sprites)
+                        | _ -> ()
             }
