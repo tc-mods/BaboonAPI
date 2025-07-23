@@ -71,6 +71,13 @@ type LevelSelectPatch() =
         TrackrefAccessor.doLevelSelectStart(__instance, ___alltrackslist)
         true
 
+    [<HarmonyPostfix>]
+    [<HarmonyPatch("clickPlay")>]
+    static member PatchPlay () =
+        // We always want the non custom handling because we use a unified loading path
+        GlobalVariables.playing_custom_track <- false
+        ()
+
     [<HarmonyPrefix>]
     [<HarmonyPatch("checkForSongsToHide")>]
     static member PatchSongsVisible (__instance: LevelSelectController, ___alltrackslist: ResizeArray<SingleTrackData>) =
