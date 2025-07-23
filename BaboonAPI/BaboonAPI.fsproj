@@ -1,4 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="../BaboonAPI.tasks" />
 
     <PropertyGroup>
         <TargetFramework>net472</TargetFramework>
@@ -91,6 +92,7 @@
         <Delete Files="$(OutDir)$(ProjectName)-thunderstore.zip" />
         <Copy SourceFiles="@(ThunderstoreAssets)" DestinationFolder="$(OutDir)thunderstore" />
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(OutDir)thunderstore/BepInEx/plugins" />
+        <CopyManifest SourceFile="$(SolutionDir)thunderstore/manifest.json" Destination="$(OutDir)thunderstore/manifest.json" Version="$(Version)" />
         <ZipDirectory DestinationFile="$(OutDir)$(ProjectName)-thunderstore.zip" SourceDirectory="$(OutDir)thunderstore" />
     </Target>
 </Project>
