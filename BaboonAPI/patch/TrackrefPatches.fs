@@ -51,9 +51,7 @@ type private TrackrefAccessor() =
 
     static member doLevelSelectStart (instance: LevelSelectController, alltrackslist: ResizeArray<SingleTrackData>) =
         // instance.gameObject.AddComponent<LevelSelectReloadBehaviour>().Init(instance, alltrackslist)
-        let index = GlobalVariables.all_track_collections.FindIndex(fun coll -> coll._unique_id = "all")
-        if index <> -1 then
-            GlobalVariables.chosen_collection_index <- index
+        ()
 
 [<HarmonyPatch(typeof<SaverLoader>, "loadTrackData")>]
 type TrackLoaderPatch() =

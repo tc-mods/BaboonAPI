@@ -97,9 +97,9 @@ type TrackLoader() =
     let mutable collectionsById = Map.empty
 
     let collectionSorter (x: TromboneCollection) (y: TromboneCollection) =
-        if x.unique_id = "default" || y.unique_id = "all" then
+        if x.unique_id = "all" then
             -1
-        elif x.unique_id = "all" || y.unique_id = "default" then
+        elif y.unique_id = "all" then
             1
         else
             x.name.CompareTo y.name
