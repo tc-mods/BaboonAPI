@@ -38,7 +38,7 @@ type internal CustomCollectionsRegistry(basePath: string, localizer: StringLocal
 
     let loadCollectionTracks (loader: CustomTrackLoader) (folderPath: string) =
         let tracks =
-            Directory.EnumerateFiles(folderPath, "song.tmb", SearchOption.TopDirectoryOnly)
+            Directory.EnumerateFiles(folderPath, "song.tmb", SearchOption.AllDirectories)
             |> Seq.map Path.GetDirectoryName
             |> Seq.choose loader.LoadTrack
 
