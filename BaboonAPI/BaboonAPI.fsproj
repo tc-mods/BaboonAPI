@@ -80,7 +80,7 @@
     <ItemGroup>
         <PackageReference Include="BepInEx.Core" Version="5.*" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-        <PackageReference Include="TromboneChamp.GameLibs" Version="1.26.0" />
+        <PackageReference Include="TromboneChamp.GameLibs" Version="1.27.0-beta.1" />
     </ItemGroup>
 
     <ItemGroup>

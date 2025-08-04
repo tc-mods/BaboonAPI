@@ -7,8 +7,12 @@ open BaboonAPI.Utility
 open BaboonAPI.Utility.Coroutines
 open UnityEngine
 
-exception DuplicateTrackrefException of string
 exception DuplicateCollectionException of string
+
+type LoadErrorType =
+    | Unknown = 0
+    | DuplicateTrackref = 1
+    | MissingFile = 2
 
 let makeSongGraph (track: TromboneTrack) =
     let generate _ =
@@ -66,13 +70,30 @@ type RegisteredTrack =
     member this.asTrackData =
         makeTrackData this.track this.trackIndex
 
-let private checkForDuplicates (tracks: seq<string * RegisteredTrack>): seq<string * RegisteredTrack> = seq {
+type LoadErrorReporter(loader: TrackCollections) =
+    member _.Clear () =
+        loader.track_loading_errors.Clear()
+
+    member _.Report (discriminant: LoadErrorType) (track: TromboneTrack) =
+        let path =
+            match track with
+            | :? FilesystemTrack as ft -> ft.folderPath
+            | other -> other.trackref
+
+        let err = TrackCollections.TrackLoadErrors(
+            error_code = int discriminant,
+            track_path = path
+        )
+
+        loader.track_loading_errors.Add err
+
+let private checkForDuplicates (errors: LoadErrorReporter) (tracks: seq<string * RegisteredTrack>): seq<string * RegisteredTrack> = seq {
     let seen = HashSet()
     for trackref, track in tracks do
         if seen.Add trackref then
             yield (trackref, track)
         else
-            raise (DuplicateTrackrefException trackref)
+            errors.Report LoadErrorType.DuplicateTrackref track.track
 }
 
 let private checkForDuplicateCollections (collections: TromboneCollection seq): TromboneCollection seq = seq {
@@ -105,11 +126,14 @@ type TrackLoader() =
             x.name.CompareTo y.name
 
     let makeTrackLoader (onProgress: Progress -> unit) =
+        let reporter = LoadErrorReporter GlobalVariables.track_collection_loader
+        reporter.Clear()
+
         let tracks =
             TrackRegistrationEvent.EVENT.invoker.OnRegisterTracks()
             |> Seq.indexed
             |> Seq.map (fun (i, track) -> track.trackref, { track = track; trackIndex = i })
-            |> checkForDuplicates
+            |> checkForDuplicates reporter
             |> hookProgress (fun i -> onProgress (LoadingTracks { loaded = i }))
             |> Seq.toArray
 

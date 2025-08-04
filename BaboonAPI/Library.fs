@@ -31,13 +31,6 @@ type BaboonPlugin() =
             | Ok () ->
                 ScoreStorage.baseGameStorage |> Option.iter (_.firstTimeBackup())
                 return Ok ()
-            | Error (TrackAccessor.DuplicateTrackrefException trackref) ->
-                let msg = String.concat "\n" [
-                    $"Duplicate tracks found with track ID '{trackref}'"
-                    "Please check your songs folder for duplicates!"
-                ]
-                return Error { PluginInfo = this.Info
-                               Message = msg }
             | Error (TrackAccessor.DuplicateCollectionException uid) ->
                 let msg = String.concat "\n" [
                     $"Duplicate collections found with unique ID '{uid}'"

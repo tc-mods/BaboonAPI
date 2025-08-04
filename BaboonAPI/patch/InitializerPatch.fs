@@ -9,6 +9,8 @@ open UnityEngine
 open UnityEngine.UI
 
 module internal ModInitializer =
+    let showerrors_m = AccessTools.Method(typeof<BrandingController>, "displayLoadingErrors")
+
     type InitializerState =
         | Success
         | Failed
@@ -40,6 +42,7 @@ module internal ModInitializer =
             if GlobalVariables.skipbrandingscreen then
                 bc.Invoke("killandload", 0.75f)
             else
+                showerrors_m.Invoke(bc, [|GlobalVariables.track_collection_loader.track_loading_errors|]) |> ignore
                 bc.Invoke("doHolyWowAnim", 0.75f)
         | Error err ->
             initialized <- Failed
