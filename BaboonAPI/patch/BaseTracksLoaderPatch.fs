@@ -57,10 +57,12 @@ type LoaderPatch() =
         TrackCollectionRegistrationEvent.EVENT.Register registry
         CustomTrackLoaderEvent.EVENT.Register registry
 
-        let customsPath = GlobalVariables.localsettings.collections_path_custom
-        let registry = CustomCollectionsRegistry (customsPath, ___string_localizer, sprites)
-        TrackRegistrationEvent.EVENT.Register registry
-        TrackCollectionRegistrationEvent.EVENT.Register registry
+        for customsPath in
+            [ GlobalVariables.localsettings.collections_path_custom
+              GlobalVariables.localsettings.collections_path_custom_additional ] do
+            let registry = CustomCollectionsRegistry(customsPath, ___string_localizer, sprites)
+            TrackRegistrationEvent.EVENT.Register registry
+            TrackCollectionRegistrationEvent.EVENT.Register registry
 
         let workshopStrings =
             { name = ___string_localizer.getLocalizedText("collections_name_workshop")
