@@ -37,8 +37,8 @@ type public BaseGameLoadedTrack internal (trackref: string, bundle: AssetBundle)
         member this.OnResume _ = ()
 
 /// Base game TromboneTrack
-type public BaseGameTrack internal (data: SavedLevelMetadata, trackref: string) =
-    let trackPath = $"{Application.streamingAssetsPath}/trackassets/{trackref}"
+type public BaseGameTrack internal (trackPath: string, data: SavedLevelMetadata, trackref: string, isDLC: bool) =
+    member _.isDLC = isDLC
 
     interface TromboneTrack with
         member _.trackname_long = data.trackname_long
@@ -109,7 +109,9 @@ type internal BaseGameTrackCollection(meta: CollectionStrings, sprites: BaseGame
     override this.BuildTrackList() =
         TrackAccessor.allTracks()
         |> Seq.map _.track
-        |> Seq.filter (fun t -> t :? BaseGameTrack)
+        |> Seq.filter (function
+            | :? BaseGameTrack as bt -> not bt.isDLC
+            | _ -> false)
 
 type internal AllTracksCollection(meta: CollectionStrings, sprites: BaseGameCollectionSprites) =
     inherit BaseTromboneCollection("all", meta.name, meta.description)
@@ -158,7 +160,7 @@ type internal BaseGameTrackRegistry(path: string, localizer: StringLocalizer, sp
                     use stream = File.Open (metadataPath, FileMode.Open)
                     let data = BinaryFormatter().Deserialize(stream) :?> SavedLevelMetadata
 
-                    yield BaseGameTrack (data, trackref)
+                    yield BaseGameTrack (trackdir, data, trackref, false)
 
             ScoreStorage.initialize trackrefs
         }

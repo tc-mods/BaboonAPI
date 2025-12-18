@@ -63,6 +63,7 @@
         <Compile Include="internal\Tootmaker.fs" />
         <Compile Include="internal\Customs.fs" />
         <Compile Include="internal\Workshop.fs" />
+        <Compile Include="internal\DLC.fs" />
         <Compile Include="patch\TrackrefPatches.fs" />
         <Compile Include="patch\BaseTracksLoaderPatch.fs" />
         <Compile Include="patch\GameControllerPatch.fs" />
@@ -80,7 +81,7 @@
     <ItemGroup>
         <PackageReference Include="BepInEx.Core" Version="5.*" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-        <PackageReference Include="TromboneChamp.GameLibs" Version="1.27.0-beta.1" />
+        <PackageReference Include="TromboneChamp.GameLibs" Version="1.29.0" />
     </ItemGroup>
 
     <ItemGroup>

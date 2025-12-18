@@ -5,6 +5,7 @@ open BaboonAPI.Hooks.Tracks
 open BaboonAPI.Internal
 open BaboonAPI.Internal.BaseGame
 open BaboonAPI.Internal.Customs
+open BaboonAPI.Internal.DLC
 open BaboonAPI.Internal.Tootmaker
 open BaboonAPI.Internal.Workshop
 open BaboonAPI.Utility.Coroutines
@@ -68,6 +69,11 @@ type LoaderPatch() =
             { name = ___string_localizer.getLocalizedText("collections_name_workshop")
               description = ___string_localizer.getLocalizedText("collections_desc_workshop") }
         let registry = WorkshopTrackLoader (workshopStrings, sprites)
+        TrackRegistrationEvent.EVENT.Register registry
+        TrackCollectionRegistrationEvent.EVENT.Register registry
+
+        let dlcPath = $"{Application.streamingAssetsPath}/trackassets_dlc"
+        let registry = DLCTrackRegistry (dlcPath, sprites)
         TrackRegistrationEvent.EVENT.Register registry
         TrackCollectionRegistrationEvent.EVENT.Register registry
 
