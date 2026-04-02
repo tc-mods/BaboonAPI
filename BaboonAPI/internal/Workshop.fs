@@ -34,7 +34,12 @@ type internal WorkshopTrackLoader(meta: CollectionStrings, sprites: BaseGameColl
             workshopTrackRefs.Clear()
 
             let loader = CustomTrackLoaderEvent.EVENT.invoker
-            let items = fetchSubscribedItems()
+            let items =
+                try fetchSubscribedItems() with
+                | err ->
+                    logger.LogWarning "Failed to load workshop tracks"
+                    logger.LogWarning err
+                    Array.empty
 
             for pubId in items do
                 let mutable size = 0UL
@@ -52,6 +57,6 @@ type internal WorkshopTrackLoader(meta: CollectionStrings, sprites: BaseGameColl
 
     interface TrackCollectionRegistrationEvent.Listener with
         member _.OnRegisterCollections() = seq {
-            if SteamUGC.GetNumSubscribedItems() > 0u then
+            if SteamManager.Initialized && SteamUGC.GetNumSubscribedItems() > 0u then
                 yield WorkshopCollection (meta, sprites, workshopTrackRefs)
         }

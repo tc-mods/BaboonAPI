@@ -7,6 +7,7 @@ open BaboonAPI.Hooks.Tracks.Collections
 open BaboonAPI.Internal
 open BaboonAPI.Internal.BaseGame
 open BaboonAPI.Utility
+open BepInEx.Logging
 open Newtonsoft.Json
 open Steamworks
 open UnityEngine
@@ -34,6 +35,7 @@ type internal DLCCollection(folderPath: string, trackRefs: string seq, meta: Tra
         trackRefs |> Seq.map TrackAccessor.fetchTrack
 
 type internal DLCTrackRegistry(basePath: string, sprites: BaseGameCollectionSprites) =
+    static let logger = Logger.CreateLogSource "BaboonAPI.DLCTrackLoader"
     let serializer = JsonSerializer()
     let mutable loadedTrackRefs = Map.empty
 
@@ -54,7 +56,11 @@ type internal DLCTrackRegistry(basePath: string, sprites: BaseGameCollectionSpri
         match tryLoadMetadata folderPath with
         | Some meta ->
             let appid = AppId_t(uint32 meta.steam_id)
-            SteamApps.BIsDlcInstalled appid
+            try SteamApps.BIsDlcInstalled appid with
+            | err ->
+                logger.LogWarning "Failed to load DLC tracks"
+                logger.LogWarning err
+                false
         | _ -> false
 
     member _.hookTrackRefs (folderPath: string, tracks: TromboneTrack seq) =
@@ -95,7 +101,7 @@ type internal DLCTrackRegistry(basePath: string, sprites: BaseGameCollectionSpri
 
     interface TrackCollectionRegistrationEvent.Listener with
         member this.OnRegisterCollections() = seq {
-            if Directory.Exists basePath then
+            if Directory.Exists basePath && SteamManager.Initialized then
                 let collections = Directory.EnumerateDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
 
                 for folder in collections do
